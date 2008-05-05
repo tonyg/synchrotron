@@ -29,4 +29,8 @@ function try_patch() {
 
     log({result1: Diff.diff3_merge(derived1, base, derived2)});
     log({result2: Diff.diff3_merge(derived1, base, derived2, true)});
+
+    for (var i = 0; i < 16; i++) {
+	log(random_uuid());
+    }
 }
