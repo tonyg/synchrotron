@@ -140,6 +140,9 @@ Diff = {
     },
 
     diff_patch: function(file1, file2) {
+	// We apply the LCD to build a JSON representation of a
+	// diff(1)-style patch.
+
 	var result = [];
 	var tail1 = file1.length;
 	var tail2 = file2.length;
@@ -178,6 +181,10 @@ Diff = {
     },
 
     invert_patch: function(patch) {
+	// Takes the output of Diff.diff_patch(), and inverts the
+	// sense of it, so that it can be applied to file2 to give
+	// file1 rather than the other way around.
+
 	for (var i = 0; i < patch.length; i++) {
 	    var chunk = patch[i];
 	    var tmp = chunk.file1;
@@ -187,6 +194,11 @@ Diff = {
     },
 
     patch: function (file, patch) {
+	// Applies a patch to a file.
+	//
+	// Given file1 and file2, Diff.patch(file1,
+	// Diff.diff_patch(file1, file2)) should give file2.
+
 	var result = [];
 	var commonOffset = 0;
 
@@ -210,6 +222,10 @@ Diff = {
     },
 
     diff_indices: function(file1, file2) {
+	// We apply the LCS to give a simple representation of the
+	// offsets and lengths of mismatched chunks in the input
+	// files. This is used by diff3_merge_indices below.
+
 	var result = [];
 	var tail1 = file1.length;
 	var tail2 = file2.length;
@@ -234,6 +250,18 @@ Diff = {
     },
 
     diff3_merge_indices: function (a, o, b) {
+	// Given three files, A, O, and B, where both A and B are
+	// independently derived from O, returns a fairly complicated
+	// internal representation of merge decisions it's taken. The
+	// interested reader may wish to consult
+	//
+	// Sanjeev Khanna, Keshav Kunal, and Benjamin C. Pierce. "A
+	// Formal Investigation of Diff3." In Arvind and Prasad,
+	// editors, Foundations of Software Technology and Theoretical
+	// Computer Science (FSTTCS), December 2007.
+	//
+	// (http://www.cis.upenn.edu/~bcpierce/papers/diff3-short.pdf)
+
 	var m1 = Diff.diff_indices(o, a);
 	var m2 = Diff.diff_indices(o, b);
 
@@ -244,7 +272,6 @@ Diff = {
 	for (var i = 0; i < m1.length; i++) { addHunk(m1[i], 0); }
 	for (var i = 0; i < m2.length; i++) { addHunk(m2[i], 2); }
 	hunks.sort();
-	//log({hunks: hunks});
 
 	var result = [];
 	var commonOffset = 0;
@@ -275,9 +302,7 @@ Diff = {
 		}
 	    } else {
 		var regions = [a.length, -1, regionLhs, regionRhs, b.length, -1];
-		//log({initRegions: regions});
 		for (var i = firstHunkIndex; i <= hunkIndex; i++) {
-		    //log({coalescing: hunks[i]});
 		    var side = hunks[i][1];
 		    var lhs = hunks[i][3];
 		    var rhs = lhs + hunks[i][4];
@@ -285,7 +310,6 @@ Diff = {
 		    regions[ri] = Math.min(lhs, regions[ri]);
 		    regions[ri+1] = Math.max(rhs, regions[ri+1]);
 		}
-		//log({finalRegions: regions});
 		result.push([-1,
 			     regions[0], regions[1] - regions[0],
 			     regions[2], regions[3] - regions[2],
@@ -299,10 +323,13 @@ Diff = {
     },
 
     diff3_merge: function (a, o, b, excludeFalseConflicts) {
+	// Applies the output of Diff.diff3_merge_indices to actually
+	// construct the merged file; the returned result alternates
+	// between "ok" and "conflict" blocks.
+
 	var result = [];
 	var files = [a, o, b];
 	var indices = Diff.diff3_merge_indices(a, o, b);
-	//log({indices: indices});
 
 	var okLines = [];
 	function flushOk() {
