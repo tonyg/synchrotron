@@ -28,7 +28,7 @@ Graph = {
 	    searchOrder.push(nodeId);
 	}
 
-	while (searchOrder) {
+	while (searchOrder.length) {
 	    var candidateId = searchOrder.shift();
 	    if (potentialMatches[candidateId]) {
 		return candidateId;
@@ -36,6 +36,8 @@ Graph = {
 		Graph._foreach(graph[candidateId].parentIds, queueForExamination);
 	    }
 	}
+
+	return null; // no LCA found.
     },
 
     Tests: {
