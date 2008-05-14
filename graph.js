@@ -5,7 +5,7 @@ Graph = {
 	}
     },
 
-    least_common_ancestor: function(graph, leafId1, leafId2) {
+    least_common_ancestor: function(parentsFun, leafId1, leafId2) {
 	/* This is a pretty crude approximation. Since we're working
 	with DAGs, rather than trees, it may not return the very very
 	least common ancestor. */
@@ -14,9 +14,8 @@ Graph = {
 
 	function augmentPotentialMatches(nodeId) {
 	    if (!potentialMatches[nodeId]) {
-		var n = graph[nodeId];
-		potentialMatches[nodeId] = n;
-		Graph._foreach(n.parentIds, augmentPotentialMatches);
+		potentialMatches[nodeId] = nodeId;
+		Graph._foreach(parentsFun(nodeId), augmentPotentialMatches);
 	    }
 	}
 
@@ -33,7 +32,7 @@ Graph = {
 	    if (potentialMatches[candidateId]) {
 		return candidateId;
 	    } else {
-		Graph._foreach(graph[candidateId].parentIds, queueForExamination);
+		Graph._foreach(parentsFun(candidateId), queueForExamination);
 	    }
 	}
 
@@ -45,6 +44,12 @@ Graph = {
 	    g[id] = {id: id, parentIds: parentIds};
 	},
 
+	_lca: function(g, id1, id2) {
+	    return Graph.least_common_ancestor(function (id) { return g[id].parentIds; },
+					       id1,
+					       id2);
+	},
+
 	t1: function() {
 	    var g = {};
 	    Graph.Tests._add(g, 'a', []);
@@ -53,8 +58,8 @@ Graph = {
 	    Graph.Tests._add(g, 'd', ['b', 'c']);
 	    Graph.Tests._add(g, 'e', ['b', 'c']);
 	    print("** t1");
-	    print(Graph.least_common_ancestor(g, 'd', 'e'));
-	    print(Graph.least_common_ancestor(g, 'e', 'd'));
+	    print(Graph.Tests._lca(g, 'd', 'e'));
+	    print(Graph.Tests._lca(g, 'e', 'd'));
 	},
 
 	t2: function () {
@@ -70,8 +75,8 @@ Graph = {
 	    Graph.Tests._add(g, 'i', ['c', 'h']);
 	    Graph.Tests._add(g, 'j', ['i']);
 	    print("** t2");
-	    print(Graph.least_common_ancestor(g, 'f', 'j'));
-	    print(Graph.least_common_ancestor(g, 'j', 'f'));
+	    print(Graph.Tests._lca(g, 'f', 'j'));
+	    print(Graph.Tests._lca(g, 'j', 'f'));
 	},
 
 	t3: function () {
@@ -81,7 +86,7 @@ Graph = {
 	    Graph.Tests._add(g, 'c', []);
 	    Graph.Tests._add(g, 'd', ['c']);
 	    print("** t3");
-	    print(Graph.least_common_ancestor(g, 'b', 'd'));
+	    print(Graph.Tests._lca(g, 'b', 'd'));
 	},
 
 	tests: function () {
