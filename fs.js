@@ -155,7 +155,8 @@ Repository.prototype.resolveRevId = function(revId) {
 
 Repository.prototype.lookupRev = function(revId, shouldResolve) {
     var candidate = this.revisions[revId];
-    if (!candidate && (shouldResolve == null || shouldResolve == true)) {
+    if (!candidate && (shouldResolve != false)) {
+	// shouldResolve is an optional parameter, hence the odd test in the line above
 	candidate = this.revisions[this.branchTip(revId)];
     }
     return candidate
