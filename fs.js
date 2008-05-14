@@ -66,36 +66,36 @@ function shallowCopy(obj) {
     return temp;
 }
 
-function FileSystem(directParent, additionalParent) {
+function Checkout(directParent, additionalParent) {
     this.inodes = {};
     this.directParent = directParent;
     this.additionalParent = additionalParent;
     this.dirty = {};
 }
 
-FileSystem.prototype.createFile = function() {
+Checkout.prototype.createFile = function() {
     var uuid = random_uuid();
     this.inodes[uuid] = {};
     return uuid;
 }
 
-FileSystem.prototype.deleteFile = function(uuid) {
+Checkout.prototype.deleteFile = function(uuid) {
     if (!this.inodes[uuid]) return false;
     delete this.inodes[uuid];
     return true;
 }
 
-FileSystem.prototype.fileExists = function(uuid) {
+Checkout.prototype.fileExists = function(uuid) {
     return !!(this.inodes[uuid]);
 }
 
-FileSystem.prototype.getProp = function(uuid, prop) {
+Checkout.prototype.getProp = function(uuid, prop) {
     var inode = this.inodes[uuid];
     if (!inode) return null;
     return deepCopy(inode[prop]);
 }
 
-FileSystem.prototype.setProp = function(uuid, prop, value) {
+Checkout.prototype.setProp = function(uuid, prop, value) {
     var inode = this.inodes[uuid];
     if (!inode) return false;
     inode[prop] = value;
@@ -103,8 +103,8 @@ FileSystem.prototype.setProp = function(uuid, prop, value) {
     return true;
 }
 
-FileSystem.prototype.clone = function() {
-    var result = new FileSystem(this.directParent, this.additionalParent);
+Checkout.prototype.clone = function() {
+    var result = new Checkout(this.directParent, this.additionalParent);
     result.inodes = deepCopy(this.inodes);
     return result;
 }
@@ -171,12 +171,12 @@ Repository.prototype.getBody = function(revRecord, aliveInodeId) {
 
 Repository.prototype.update = function(revId) {
     if (revId == null) {
-	return new FileSystem(null, null);
+	return new Checkout(null, null);
     }
 
     var rev = this.revisions[revId];
     if (!rev) return null;
-    var fs = new FileSystem(revId, null);
+    var fs = new Checkout(revId, null);
     for (var inode in rev.alive) {
 	fs.inodes[inode] = this.getBody(rev, inode);
     }
