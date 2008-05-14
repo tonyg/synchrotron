@@ -1,99 +1,115 @@
-function random_hex_string(n) {
-    var digits = "0123456789abcdef";
-    var result = "";
-    for (var i = 0; i < n; i++) {
-	result = result + digits[Math.floor(Math.random() * 16)];
+var Dvcs = {
+    Util: {
+	random_hex_string: function(n) {
+	    var digits = "0123456789abcdef";
+	    var result = "";
+	    for (var i = 0; i < n; i++) {
+		result = result + digits[Math.floor(Math.random() * 16)];
+	    }
+	    return result;
+	},
+
+	random_uuid: function() {
+	    return [Dvcs.Util.random_hex_string(8),
+		    Dvcs.Util.random_hex_string(4),
+		    "4" + Dvcs.Util.random_hex_string(3),
+		    ((Math.floor(Math.random() * 256) & ~64) | 128).toString(16) +
+		      Dvcs.Util.random_hex_string(2),
+		    Dvcs.Util.random_hex_string(12)].join("-");
+	},
+
+	dict_union: function(s1, s2) {
+	    var result = {};
+	    for (var k in s2) { result[k] = s2[k]; }
+	    for (var k in s1) { result[k] = s1[k]; }
+	    return result;
+	},
+
+	dict_difference: function(s1, s2) {
+	    var result = {};
+	    for (var k in s1) { result[k] = s1[k]; }
+	    for (var k in s2) { delete result[k]; }
+	    return result;
+	},
+
+	dict_to_set: function(d) {
+	    for (var k in d) { d[k] = 1; }
+	    return d;
+	},
+
+	deepCopy: function(obj) {
+	    // Courtesy of
+	    // http://keithdevens.com/weblog/archive/2007/Jun/07/javascript.clone
+	    //
+	    // Does not handle recursive structures.
+
+	    if (obj == null || typeof(obj) != 'object') {
+		return obj;
+	    }
+
+	    var temp = obj.constructor();
+	    for (var key in obj) {
+		temp[key] = Dvcs.Util.deepCopy(obj[key]);
+	    }
+	    return temp;
+	}
+    },
+
+    Mergers: {
+	simpleScalarMerger: function(v1, v0, v2) {
+	    if (v1 == v2) return [{ok: v1}];
+	    if (v1 == v0) return [{ok: v2}];
+	    if (v2 == v0) return [{ok: v1}];
+	    return [{conflict: {a: v1, o: v0, b: v2}}];
+	},
+
+	simpleTextualMerger: function(v1, v0, v2) {
+	    return Diff.diff3_merge(v1, v0, v2, true);
+	},
+
+	Defaults: {}
+    },
+
+    Checkout: function(directParent, additionalParent, currentBranch) {
+	this.inodes = {};
+	this.directParent = directParent;
+	this.additionalParent = additionalParent;
+	this.dirty = {};
+	this.currentBranch = currentBranch;
+    },
+
+    Repository: function() {
+	this.bodies = {};
+	this.revisions = {};
+	this.children = {};
     }
-    return result;
 }
 
-function random_uuid() {
-    return [random_hex_string(8),
-	    random_hex_string(4),
-	    "4" + random_hex_string(3),
-	    ((Math.floor(Math.random() * 256) & ~64) | 128).toString(16) + random_hex_string(2),
-	    random_hex_string(12)].join("-");
-}
+Dvcs.Mergers.Defaults["text"] = Dvcs.Mergers.simpleTextualMerger;
 
-function dict_union(s1, s2) {
-    var result = {};
-    for (var k in s2) { result[k] = s2[k]; }
-    for (var k in s1) { result[k] = s1[k]; }
-    return result;
-}
-
-function dict_difference(s1, s2) {
-    var result = {};
-    for (var k in s1) { result[k] = s1[k]; }
-    for (var k in s2) { delete result[k]; }
-    return result;
-}
-
-function dict_to_set(d) {
-    for (var k in d) { d[k] = 1; }
-    return d;
-}
-
-function deepCopy(obj) {
-    // Courtesy of
-    // http://keithdevens.com/weblog/archive/2007/Jun/07/javascript.clone
-    //
-    // Does not handle recursive structures.
-
-    if (obj == null || typeof(obj) != 'object') {
-        return obj;
-    }
-
-    var temp = obj.constructor();
-    for (var key in obj) {
-        temp[key] = deepCopy(obj[key]);
-    }
-    return temp;
-}
-
-function shallowCopy(obj) {
-    if (obj == null || typeof(obj) != 'object') {
-        return obj;
-    }
-
-    var temp = obj.constructor();
-    for (var key in obj) {
-        temp[key] = obj[key];
-    }
-    return temp;
-}
-
-function Checkout(directParent, additionalParent, currentBranch) {
-    this.inodes = {};
-    this.directParent = directParent;
-    this.additionalParent = additionalParent;
-    this.dirty = {};
-    this.currentBranch = currentBranch;
-}
-
-Checkout.prototype.createFile = function() {
-    var uuid = random_uuid();
+Dvcs.Checkout.prototype.createFile = function() {
+    var uuid = Dvcs.Util.random_uuid();
     this.inodes[uuid] = {};
     return uuid;
 }
 
-Checkout.prototype.deleteFile = function(uuid) {
+Dvcs.Checkout.prototype.deleteFile = function(uuid) {
     if (!this.inodes[uuid]) return false;
     delete this.inodes[uuid];
     return true;
 }
 
-Checkout.prototype.fileExists = function(uuid) {
+Dvcs.Checkout.prototype.fileExists = function(uuid) {
     return !!(this.inodes[uuid]);
 }
 
-Checkout.prototype.getProp = function(uuid, prop) {
+Dvcs.Checkout.prototype.getProp = function(uuid, prop) {
     var inode = this.inodes[uuid];
     if (!inode) return null;
-    return deepCopy(inode[prop]);
+    return Dvcs.Util.deepCopy(inode[prop]);
 }
 
-Checkout.prototype.setProp = function(uuid, prop, value) {
+Dvcs.Checkout.prototype.setProp = function(uuid, prop, value) {
     var inode = this.inodes[uuid];
     if (!inode) return false;
     inode[prop] = value;
@@ -101,48 +117,23 @@ Checkout.prototype.setProp = function(uuid, prop, value) {
     return true;
 }
 
-Checkout.prototype.getBranch = function() {
+Dvcs.Checkout.prototype.getBranch = function() {
     return this.currentBranch;
 }
 
-Checkout.prototype.setBranch = function(newBranch) {
+Dvcs.Checkout.prototype.setBranch = function(newBranch) {
     this.currentBranch = newBranch;
 }
 
-Checkout.prototype.clone = function() {
-    var result = new Checkout(this.directParent, this.additionalParent, this.currentBranch);
-    result.inodes = deepCopy(this.inodes);
+Dvcs.Checkout.prototype.clone = function() {
+    var result = new Dvcs.Checkout(this.directParent,
+				   this.additionalParent,
+				   this.currentBranch);
+    result.inodes = Dvcs.Util.deepCopy(this.inodes);
     return result;
 }
 
-function simpleScalarMerger(v1, v0, v2) {
-    if (v1 == v2) {
-	return [{ok: v1}];
-    }
-    if (v1 == v0) {
-	return [{ok: v2}];
-    }
-    if (v2 == v0) {
-	return [{ok: v1}];
-    }
-    return [{conflict: {a: v1, o: v0, b: v2}}];
-}
-
-function simpleTextualMerger(v1, v0, v2) {
-    return Diff.diff3_merge(v1, v0, v2, true);
-}
-
-DefaultMergers = {
-    "text": simpleTextualMerger
-};
-
-function Repository() {
-    this.bodies = {};
-    this.revisions = {};
-    this.children = {};
-}
-
-Repository.prototype.resolveRevId = function(revId) {
+Dvcs.Repository.prototype.resolveRevId = function(revId) {
     if (this.revisions[revId]) {
 	return revId;
     } else {
@@ -150,7 +141,7 @@ Repository.prototype.resolveRevId = function(revId) {
     }
 }
 
-Repository.prototype.lookupRev = function(revId, shouldResolve) {
+Dvcs.Repository.prototype.lookupRev = function(revId, shouldResolve) {
     var candidate = this.revisions[revId];
     if (!candidate && (shouldResolve != false)) {
 	// shouldResolve is an optional parameter, hence the odd test in the line above
@@ -167,13 +158,13 @@ Repository.prototype.lookupRev = function(revId, shouldResolve) {
 	     additionalParent: null };
 }
 
-Repository.prototype.getBody = function(revRecord, aliveInodeId) {
+Dvcs.Repository.prototype.getBody = function(revRecord, aliveInodeId) {
     var bodyId = revRecord.alive[aliveInodeId];
     if (!bodyId) return {};
-    return deepCopy(this.bodies[bodyId]);
+    return Dvcs.Util.deepCopy(this.bodies[bodyId]);
 }
 
-Repository.prototype.update = function(unresolvedRevId) {
+Dvcs.Repository.prototype.update = function(unresolvedRevId) {
     var revId = this.resolveRevId(unresolvedRevId);
     var rev = this.revisions[revId];
     if (!rev) {
@@ -182,33 +173,33 @@ Repository.prototype.update = function(unresolvedRevId) {
 	    // asked for the default branch and there are currently no
 	    // commits at all in the repo. Hand back an empty
 	    // checkout.
-	    return new Checkout(null, null, null);
+	    return new Dvcs.Checkout(null, null, null);
 	} else {
 	    // Couldn't find what the user asked for.
 	    return null;
 	}
     }
 
-    var fs = new Checkout(revId, null, rev.branch);
+    var fs = new Dvcs.Checkout(revId, null, rev.branch);
     for (var inode in rev.alive) {
 	fs.inodes[inode] = this.getBody(rev, inode);
     }
     return fs;
 }
 
-Repository.prototype.commit = function(fs, metadata) {
+Dvcs.Repository.prototype.commit = function(fs, metadata) {
     var directParentRev = this.lookupRev(fs.directParent);
     var additionalParentRev = this.lookupRev(fs.additionalParent);
 
-    var oldAlive = dict_union(directParentRev.alive, additionalParentRev.alive);
-    var oldDead = dict_union(directParentRev.dead, additionalParentRev.dead);
+    var oldAlive = Dvcs.Util.dict_union(directParentRev.alive, additionalParentRev.alive);
+    var oldDead = Dvcs.Util.dict_union(directParentRev.dead, additionalParentRev.dead);
 
     var newChanged = [];
     var newAlive = {};
     for (var inodeId in fs.inodes) {
 	if (fs.dirty[inodeId]) {
-	    var newBodyId = random_uuid();
-	    this.bodies[newBodyId] = deepCopy(fs.inodes[inodeId]);
+	    var newBodyId = Dvcs.Util.random_uuid();
+	    this.bodies[newBodyId] = Dvcs.Util.deepCopy(fs.inodes[inodeId]);
 	    newAlive[inodeId] = newBodyId;
 	    newChanged.push(inodeId);
 	} else {
@@ -216,7 +207,9 @@ Repository.prototype.commit = function(fs, metadata) {
 	}
     }
 
-    var newDead = dict_to_set(dict_union(oldDead, dict_difference(oldAlive, newAlive)));
+    var newDead = Dvcs.Util.dict_to_set(Dvcs.Util.dict_union(oldDead,
+							     Dvcs.Util.dict_difference(oldAlive,
+										       newAlive)));
 
     var rev = { alive: newAlive,
 		dead: newDead,
@@ -227,7 +220,7 @@ Repository.prototype.commit = function(fs, metadata) {
 		directParent: fs.directParent,
 		additionalParent: fs.additionalParent };
 
-    var newRevId = random_uuid();
+    var newRevId = Dvcs.Util.random_uuid();
     this.recordRevision(newRevId, rev);
 
     fs.directParent = newRevId;
@@ -236,7 +229,7 @@ Repository.prototype.commit = function(fs, metadata) {
     return newRevId;
 }
 
-Repository.prototype.merge = function(r1, r2) {
+Dvcs.Repository.prototype.merge = function(r1, r2) {
     if (r1 == r2) {
 	return this.update(r1);
     }
@@ -287,12 +280,12 @@ Repository.prototype.merge = function(r1, r2) {
     return {files: fs, conflicts: conflicts};
 }
 
-Repository.prototype.lookupMerger = function(prop) {
-    return DefaultMergers[prop] || simpleScalarMerger;
+Dvcs.Repository.prototype.lookupMerger = function(prop) {
+    return Dvcs.Mergers.Defaults[prop] || Dvcs.Mergers.simpleScalarMerger;
 }
 
-Repository.prototype.mergeBodies = function(bThis, bBase, bOther, kSuccess, kConflict) {
-    var props = dict_union(bThis, bOther);
+Dvcs.Repository.prototype.mergeBodies = function(bThis, bBase, bOther, kSuccess, kConflict) {
+    var props = Dvcs.Util.dict_union(bThis, bOther);
     var bResult = {};
     var failures = {};
     var haveConflicts = false;
@@ -314,7 +307,7 @@ Repository.prototype.mergeBodies = function(bThis, bBase, bOther, kSuccess, kCon
     }
 }
 
-Repository.prototype.recordRevision = function(newRevId, rev) {
+Dvcs.Repository.prototype.recordRevision = function(newRevId, rev) {
     var self = this;
     function addChild(parentId) {
 	if (parentId == null) return;
@@ -329,26 +322,31 @@ Repository.prototype.recordRevision = function(newRevId, rev) {
     addChild(rev.additionalParent);
 }
 
-Repository.prototype.exportRevisions = function(revIds) {
-    var revs = {};
-    for (var i = 0; i < revIds; i++) {
-	var rev = this.revisions[revIds[i]];
-	if (rev) revs[revIds[i]] = rev;
-    }
-
-    var bodies = {};
-    for (var revId in revs) {
-	var alive = revs[revId].alive;
-	for (var inodeId in alive) {
-	    var bodyId = alive[inodeId];
-	    bodies[bodyId] = this.bodies[bodyId];
+Dvcs.Repository.prototype.exportRevisions = function(revIds) {
+    if (revIds) {
+	var revs = {};
+	for (var i = 0; i < revIds; i++) {
+	    var rev = this.revisions[revIds[i]];
+	    if (rev) revs[revIds[i]] = rev;
 	}
-    }
 
-    return {revisions: revs, bodies: bodies};
+	var bodies = {};
+	for (var revId in revs) {
+	    var alive = revs[revId].alive;
+	    for (var inodeId in alive) {
+		var bodyId = alive[inodeId];
+		bodies[bodyId] = this.bodies[bodyId];
+	    }
+	}
+
+	return {revisions: revs, bodies: bodies};
+    } else {
+	// Shortcut for all revisions. Be warned: shares structure!
+	return {revisions: this.revisions, bodies: this.bodies};
+    }
 }
 
-Repository.prototype.importRevisions = function(e) {
+Dvcs.Repository.prototype.importRevisions = function(e) {
     for (var bodyId in e.bodies) {
 	this.bodies[bodyId] = e.bodies[bodyId];
     }
@@ -357,11 +355,11 @@ Repository.prototype.importRevisions = function(e) {
     }
 }
 
-Repository.prototype.allRevisions = function() {
-    return dict_to_set(this.revisions);
+Dvcs.Repository.prototype.allRevisions = function() {
+    return Dvcs.Util.dict_to_set(this.revisions);
 }
 
-Repository.prototype.branchHeads = function(branch) {
+Dvcs.Repository.prototype.branchHeads = function(branch) {
     var result = [];
     for (var revId in this.revisions) {
 	var rev = this.revisions[revId];
@@ -382,7 +380,7 @@ Repository.prototype.branchHeads = function(branch) {
     return result;
 }
 
-Repository.prototype.branchTip = function(branch) {
+Dvcs.Repository.prototype.branchTip = function(branch) {
     var newestHead = null;
     var newestRev = null;
     var branchHeads = this.branchHeads(branch);
@@ -397,7 +395,7 @@ Repository.prototype.branchTip = function(branch) {
     return newestHead;
 }
 
-Repository.prototype.allBranches = function() {
+Dvcs.Repository.prototype.allBranches = function() {
     var branches = {}
     for (var revId in this.revisions) {
 	var rev = this.revisions[revId];
@@ -426,63 +424,69 @@ Repository.prototype.allBranches = function() {
     return branches;
 }
 
-function pp(x) {
-    return JSON.stringify(x, null, 2);
-}
+Dvcs.Tests = {
+    Rt1: function() {
+	function pp(x) {
+	    return JSON.stringify(x, null, 2);
+	}
 
-function Rt1() {
-    var repo = new Repository();
-    var fs = repo.update(null);
+	var repo = new Dvcs.Repository();
+	var fs = repo.update(null);
 
-    function d(x) {
-	print(x);
-	print(pp({repo: repo,
-		  fs: fs,
-		  allBranches: repo.allBranches()}));
+	function d(x) {
+	    print(x);
+	    print(pp({repo: repo,
+		      fs: fs,
+		      allBranches: repo.allBranches()}));
+	    print();
+	}
+
+	var fileA = fs.createFile();
+	d("start");
+
+	fs.setProp(fileA, "name", "File A");
+	fs.setProp(fileA, "text", "A B C D E".split(/ /));
+	var rA = repo.commit(fs);
+	d("post-rA");
+	fs.setBranch("BBB");
+	fs.setProp(fileA, "text", "G G G A B C D E".split(/ /));
+	var rB1 = repo.commit(fs);
+	d("post-rB1");
+	fs.setProp(fileA, "text", "A B C D E G G G A B C D E".split(/ /));
+	var rB2 = repo.commit(fs);
+	d("post-rB2");
+
+	fs = repo.update(rA);
+	d("post-update-to-rA");
+	fs.setProp(fileA, "name", "File A, renamed");
+	fs.setProp(fileA, "text", "A B X D E".split(/ /));
+	var rC = repo.commit(fs);
+	d("post-rC");
+
+	var mergeResult = repo.merge(rC, rB2);
+	print("--------------------");
+	print(pp(mergeResult));
+	print("--------------------");
+
+	var rMerger = repo.commit(mergeResult.files);
+	fs = repo.update(rMerger);
+	d("post-rMerger");
+
+	print("branch tip BBB: "+repo.branchTip("BBB"));
+	print("branch tip NonExistent: "+repo.branchTip("NonExistent"));
 	print();
+
+	fs = repo.update("BBB");
+	fs.deleteFile(fileA);
+	var rB3 = repo.commit(fs);
+	d("post-rB3");
+
+	var rMerger2 = repo.commit(repo.merge(rB3, rMerger).files);
+	fs = repo.update(rMerger2);
+	d("post-rMerger2");
+
+	print("---------------------------------------------------------------------------");
+	print(pp(repo.exportRevisions()));
+	print("---------------------------------------------------------------------------");
     }
-
-    var fileA = fs.createFile();
-    d("start");
-
-    fs.setProp(fileA, "name", "File A");
-    fs.setProp(fileA, "text", "A B C D E".split(/ /));
-    var rA = repo.commit(fs);
-    d("post-rA");
-    fs.setBranch("BBB");
-    fs.setProp(fileA, "text", "G G G A B C D E".split(/ /));
-    var rB1 = repo.commit(fs);
-    d("post-rB1");
-    fs.setProp(fileA, "text", "A B C D E G G G A B C D E".split(/ /));
-    var rB2 = repo.commit(fs);
-    d("post-rB2");
-
-    fs = repo.update(rA);
-    d("post-update-to-rA");
-    fs.setProp(fileA, "name", "File A, renamed");
-    fs.setProp(fileA, "text", "A B X D E".split(/ /));
-    var rC = repo.commit(fs);
-    d("post-rC");
-
-    var mergeResult = repo.merge(rC, rB2);
-    print("--------------------");
-    print(pp(mergeResult));
-    print("--------------------");
-
-    var rMerger = repo.commit(mergeResult.files);
-    fs = repo.update(rMerger);
-    d("post-rMerger");
-
-    print("branch tip BBB: "+repo.branchTip("BBB"));
-    print("branch tip NonExistent: "+repo.branchTip("NonExistent"));
-    print();
-
-    fs = repo.update("BBB");
-    fs.deleteFile(fileA);
-    var rB3 = repo.commit(fs);
-    d("post-rB3");
-
-    var rMerger2 = repo.commit(repo.merge(rB3, rMerger).files);
-    fs = repo.update(rMerger2);
-    d("post-rMerger2");
 }
