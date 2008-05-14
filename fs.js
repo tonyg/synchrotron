@@ -426,15 +426,19 @@ Repository.prototype.allBranches = function() {
     return branches;
 }
 
+function pp(x) {
+    return JSON.stringify(x, null, 2);
+}
+
 function Rt1() {
     var repo = new Repository();
     var fs = repo.update(null);
 
     function d(x) {
 	print(x);
-	print(uneval(repo));
-	print(uneval(fs));
-	print("allBranches: "+uneval(repo.allBranches()));
+	print(pp({repo: repo,
+		  fs: fs,
+		  allBranches: repo.allBranches()}));
 	print();
     }
 
@@ -462,7 +466,7 @@ function Rt1() {
 
     var mergeResult = repo.merge(rC, rB2);
     print("--------------------");
-    print(uneval(mergeResult));
+    print(pp(mergeResult));
     print("--------------------");
 
     var rMerger = repo.commit(mergeResult.files);
