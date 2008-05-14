@@ -97,4 +97,4 @@ Graph = {
     }
 };
 
-Graph.Tests.tests();
+// Graph.Tests.tests();
