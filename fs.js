@@ -8,14 +8,11 @@ function random_hex_string(n) {
 }
 
 function random_uuid() {
-    return random_hex_string(8);
-/*
     return [random_hex_string(8),
 	    random_hex_string(4),
 	    "4" + random_hex_string(3),
 	    ((Math.floor(Math.random() * 256) & ~64) | 128).toString(16) + random_hex_string(2),
 	    random_hex_string(12)].join("-");
-*/
 }
 
 function dict_union(s1, s2) {
