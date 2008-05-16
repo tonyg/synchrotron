@@ -209,23 +209,23 @@ js> uneval(Diff.patch("head cold", delta).join(""))
     <th>Notes</th>
   </tr>
   <tr>
-    <td>A</td> <td>A</td> <td>A</td> <td>A</td>
+    <td class="Y">A</td> <td class="Y">A</td> <td class="Y">A</td> <td class="Y">A</td>
     <td>no changes</td>
   </tr>
   <tr>
-    <td>A</td> <td>A</td> <td>B</td> <td>B</td>
+    <td class="Y">A</td> <td class="Y">A</td> <td class="B">B</td> <td class="B">B</td>
     <td>"other" wins</td>
   </tr>
   <tr>
-    <td>B</td> <td>A</td> <td>A</td> <td>B</td>
+    <td class="B">B</td> <td class="Y">A</td> <td class="Y">A</td> <td class="B">B</td>
     <td>"this" wins</td>
   </tr>
   <tr>
-    <td>B</td> <td>A</td> <td>B</td> <td>B or conflict</td>
+    <td class="B">B</td> <td class="Y">A</td> <td class="B">B</td> <td class="R">B or conflict</td>
     <td><a href="http://revctrl.org/AccidentalCleanMerge">accidental clean merge</a></td>
   </tr>
   <tr>
-    <td>B</td> <td>A</td> <td>C</td> <td>conflict</td>
+    <td class="B">B</td> <td class="Y">A</td> <td class="G">C</td> <td class="R">conflict</td>
     <td>"true" conflict</td>
   </tr>
 </table>
