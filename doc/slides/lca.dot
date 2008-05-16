@@ -1,0 +1,24 @@
+digraph LCA {
+	node [height="0.2", width="0.5", margin="0"];
+//	graph [rankdir=LR];
+
+	a -> b;
+	b -> c;
+	c -> d;
+	c -> e;
+	b -> f;
+	f -> g;
+	f -> h;
+	a -> i;
+	i -> j;
+	j -> k;
+	j -> l;
+	i -> m;
+	m -> n;
+	m -> o;
+
+	k [style = "filled", fillcolor = "#cccccc"];
+	n [style = "filled", fillcolor = "#cccccc"];
+
+	i [style = "filled", fillcolor = "#ff8888"];
+}

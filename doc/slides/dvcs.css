@@ -1,3 +1,7 @@
-.common { background: #ffffcc; }
-.removed { background: #ffcccc; }
-.inserted { background: #ccffcc; }
+.common { background: #ffff00; }
+.removed { background: #ff8888; }
+.inserted { background: #88ff88; }
+
+.highlight { background: #ffff00; }
+
+.center { text-align: center; }

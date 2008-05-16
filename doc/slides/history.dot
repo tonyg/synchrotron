@@ -1,0 +1,27 @@
+digraph History {
+//	node [height="0.2", width="0.5", margin="0"];
+	node [shape="record"];
+	graph [rankdir=RL];
+
+	a [label="a|Who=tonyg\nDate=1 Jan"]
+	b [label="b|Who=tonyg\nDate=2 Jan"]
+	c [label="c|Who=tonyg\nDate=3 Jan"]
+	g [label="g|Who=mikeb\nDate=4 Jan"]
+	d [label="d|Who=tonyg\nDate=5 Jan"]
+	h [label="h|Who=mikeb\nDate=6 Jan"]
+	i [label="i|Who=mikeb\nDate=7 Jan"]
+	e [label="e|Who=tonyg\nDate=8 Jan"]
+
+	b -> a;
+	c -> b;
+	d -> c;
+	e -> d;
+
+	g -> a;
+	h -> g;
+	i -> h;
+
+	d -> g;
+	e -> h;
+	i -> c;
+}

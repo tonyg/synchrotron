@@ -1,0 +1,28 @@
+digraph Tricky {
+//	node [height="0.2", width="0.5", margin="0"];
+	graph [rankdir=LR];
+
+	a -> b;
+	b -> c;
+	c -> d;
+	d -> e;
+
+	a -> g;
+	g -> h;
+	h -> i;
+
+	g -> d;
+	h -> e;
+	c -> i;
+
+	e -> "??" [style = "dashed"];
+	i -> "??" [style = "dashed"];
+
+	e [style = "filled", fillcolor = "#cccccc"];
+	i [style = "filled", fillcolor = "#cccccc"];
+
+	a [style = "filled", fillcolor = "#8888ff"];
+
+	c [style = "filled", fillcolor = "#ff8888"];
+	h [style = "filled", fillcolor = "#ff8888"];
+}

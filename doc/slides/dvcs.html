@@ -42,60 +42,349 @@
 <div class="slide">
 <h1>Distributed Version Control in JavaScript</h1>
 <h2>or: the seductive world of the 3-way merge</h2>
-<h3>Tony Garnock-Jones</h3>
+<h3>Tony Garnock-Jones <small><i>tonyg@lshift.net</i></small></h3>
 <h4>LShift Ltd.</h4>
 </div>
 
 
 <div class="slide">
-<h1>Ingredients</h1>
+<h1>Morals, Right Up Front</h1>
 <ul>
-<li>Diff and patch</li>
-<li>Diff3, a 3-way merge algorithm</li>
-<li>Least Common Ancestor</li>
-<li>History</li>
-<li>Synchronisation</li>
+  <li>Version Control, even distributed, isn't hard if you factor it right
+    <ul>
+      <li>diff tools: ~360 LOC</li>
+      <li>graph utilities: ~40 LOC</li>
+      <li>DVCS code: ~420 LOC</li>
+      <li>time spent: three Saturday afternoons</li>
+    </ul>
+  </li>
+  <li>
+    Version Control can <i>seem</i> jolly difficult if you tangle all
+    the pieces together (CVS, SVN, ...)
+  </li>
+  <li>
+    Merging is the most technically important bit
+  </li>
+  <li>
+    Little Unix-style composable tools are the way to go (but user
+    interface is also very important)
+  </li>
+</ul>
+<div class="handout">
+<p>
+  Modern DVCSs factor apart networking, synchronisation, history,
+  storage, and merging; older VCSs tangled them all together, which
+  led to much implementation and conceptual complexity.
+</p>
+</div>
+
+<div class="slide">
+<h1>Basic Algorithms</h1>
+<ul>
+  <li>Diff and patch
+    <ul>
+      <li>used for <i><a href="http://revctrl.org/Resolution">resolution</a></i> (= the process of deciding what the user did to a file)</li>
+      <li>"two-way merge"</li>
+    </ul>
+  </li>
+  <li>Diff3, a 3-way merge algorithm
+    <ul>
+      <li>used for history-sensitive textual merge</li>
+      <li>other merge algorithms exist; some are better!</li>
+    </ul>
+  </li>
+  <li>Least Common Ancestor
+    <ul>
+      <li>used to find the most appropriate ancestral revision to use in a merge</li>
+    </ul>
+  </li>
 </ul>
 </div>
 
 <div class="slide">
-<h1>The Basics</h1>
-<pre>
+<h1>Diff</h1>
+<ul>
+  <li>Longest Common Subsequence
+    <pre>
 <span class="common">he</span><span class="removed">llo,</span><span class="common"> </span><span class="removed">w</span><span class="common">o</span><span class="removed">r</span><span class="common">ld</span>
 <span class="common">he</span><span class="inserted">ad  </span><span class="common"> </span><span class="inserted">c</span><span class="common">o</span> <span class="common">ld</span>
-</pre>
-<div class="handout">
-<p><tt>diff</tt> uses a <i>Longest Common Subsequence</i> algorithm to find a short description of the differences between two files. The notion of <i>minimum edit distance</i> is a related idea.</p>
-<p>It so happens that the output of <tt>diff</tt> often makes sense to a human trying to figure out how a file has been changed. How lucky!</p>
-</div>
-</div>
+    </pre>
+  </li>
+  <li>Diff produces a delta (a.k.a. "patch", "hunk", "chunk", "diff")
+    <pre>
+var delta = Diff.diff_patch("hello, world", "head cold");
 
-<div class="slide">
-<h1></h1>
-</div>
-
-<div class="slide">
-<h1></h1>
-</div>
-
-<div class="slide">
-<h1></h1>
-</div>
-
-<div class="slide">
-<h1>[slide title]</h1>
-<ul>
-<li>[point one]</li>
-<li>[point two]</li>
-<li>[point three]</li>
-<li>[point four]</li>
-<li>[point five]</li>
+/* [{file1: {offset:2, length:4, chunk:["l", "l", "o", ","]},
+     file2: {offset:2, length:2, chunk:["a", "d"]}},
+    {file1: {offset:7, length:1, chunk:["w"]},
+     file2: {offset:5, length:1, chunk:["c"]}},
+    {file1: {offset:9, length:1, chunk:["r"]},
+     file2: {offset:7, length:0, chunk:[]}}] */
+    </pre>
+  </li>
 </ul>
 <div class="handout">
-[any material that should appear in print but not on the slide]
+<p>
+  <tt>diff</tt> uses a <i>Longest Common Subsequence</i> algorithm to
+  find a short description of the differences between two files. The
+  notion of <i>minimum edit distance</i> is a related idea.
+</p>
+<p>
+  It so happens that the output of <tt>diff</tt> often makes sense to
+  a human trying to figure out how a file has been changed. How lucky!
+</p>
+<p>
+  Note that <tt>Diff.diff_patch</tt> can operate equally well on lists
+  of strings an on lists of characters (strings). It doesn't work very
+  well when given single strings, as in the example above, but it does
+  work.
+</p>
+<p>
+  Sometimes called two-way merge: every difference is a conflict
+</p>
 </div>
 </div>
 
+<div class="slide">
+<h1>Patch</h1>
+<ul>
+  <li>Patch applies a delta &mdash; <font color="red">A + delta = B</font>
+    <pre>
+
+js> uneval(Diff.patch("hello, world", delta).join(""))
+"head cold"
+    </pre>
+  </li>
+  <li>Inverting a delta is possible &mdash; <font color="red">B &ndash; delta = A</font>
+    <pre>
+
+js> Diff.invert_patch(delta);
+js> uneval(Diff.patch("head cold", delta).join(""))
+"hello, world"
+    </pre>
+  </li>
+</ul>
+<div class="handout">
+<p>
+  In some revision-control systems, e.g. darcs, inverting a patch is a
+  central operation. Darcs in particular has a full (and very useful!)
+  "theory of patches", where patch inversion, commutation and merging
+  are developed formally.
+</p>
+</div>
+</div>
+
+<div class="slide">
+<h1>Variations</h1>
+<ul>
+  <li><tt>Diff.diff_comm</tt> - works like a simple Unix comm(1)</li>
+  <li><tt>Diff.diff_patch</tt> - works like a simple Unix diff(1)</li>
+  <li><tt>Diff.invert_patch</tt> - inverts a patch produced by diff_patch</li>
+  <li><tt>Diff.patch</tt> - works like a (very) simple Unix patch(1)</li>
+  <li><tt>Diff.diff_indices</tt> - like diff_patch, but only gives offset and length information</li>
+</ul>
+</div>
+
+<div class="slide">
+<h1>Diff3 and Three-Way Merging</h1>
+<ul>
+  <li>History-sensitive merge</li>
+  <li>Some changes are conflicts; others are not</li>
+  <li>Automatically smart about which is which, in a fairly understandable and predictable way</li>
+  <li>Sometimes blows up badly - for details, see
+    <ul>
+      <li>Khanna, Kunal and Pierce, "<a href="http://www.cis.upenn.edu/~bcpierce/papers/diff3-short.pdf">A Formal Investigation of Diff3</a>"</li>
+      <li>The Revision Control wiki, <a href="http://revctrl.org/">revctrl.org</a></li>
+    </ul>
+  </li>
+  <li>Better merge algorithms than diff3 exist (revctrl.org has the details)</li>
+</ul>
+</div>
+
+<div class="slide">
+<h1>Diff3 and Three-Way Merging</h1>
+<table cellpadding="4" border="1">
+  <tr>
+    <th>"this"</th> <th>"base"</th> <th>"other"</th> <th>Result</th>
+    <th>Notes</th>
+  </tr>
+  <tr>
+    <td>A</td> <td>A</td> <td>A</td> <td>A</td>
+    <td>no changes</td>
+  </tr>
+  <tr>
+    <td>A</td> <td>A</td> <td>B</td> <td>B</td>
+    <td>"other" wins</td>
+  </tr>
+  <tr>
+    <td>B</td> <td>A</td> <td>A</td> <td>B</td>
+    <td>"this" wins</td>
+  </tr>
+  <tr>
+    <td>B</td> <td>A</td> <td>B</td> <td>B or conflict</td>
+    <td><a href="http://revctrl.org/AccidentalCleanMerge">accidental clean merge</a></td>
+  </tr>
+  <tr>
+    <td>B</td> <td>A</td> <td>C</td> <td>conflict</td>
+    <td>"true" conflict</td>
+  </tr>
+</table>
+</div>
+
+<div class="slide">
+<h1>Diff3 and Three-Way Merging</h1>
+<pre>
+var base =
+  "the quick<span class="highlight"> brown </span>fox <span class="highlight">jumped</span> over <span class="highlight">a</span> dog".split(/\s+/);
+
+var derived1 =
+  "the quick<span class="highlight"> </span>fox <span class="highlight">jumps</span> over <span class="highlight">some lazy</span> dog".split(/\s+/);
+var derived2 =
+  "the quick<span class="highlight"> brown </span>fox <span class="highlight">jumps</span> over <span class="highlight">some record</span> dog".split(/\s+/);
+
+var mergeResult = Diff.diff3_merge(derived1, base, derived2, true);
+
+/* [{ok:["the", "quick",<span class="highlight"> </span>"fox", "jump<span class="highlight">s</span>", "over"]},
+    {conflict:{a:["some", "lazy"],   aIndex:5,
+               o:["a"],              oIndex:6,
+               b:["some", "record"], bIndex:6}},
+    {ok:["dog"]}] */
+</pre>
+</div>
+
+<div class="slide">
+<h1>Least Common Ancestor</h1>
+<div class="center"><img src="lca.png" alt="Tree with LCA marked" /></div>
+<div class="handout">
+<p>
+  LCA is defined for trees. Efficient algorithms are known to
+  exist. It has also been defined for DAGs, which is the case we have
+  in a DVCS, but the definition leads to some problems in our case.
+</p>
+</div>
+</div>
+
+<div class="slide">
+<h1>DVCS Components</h1>
+<ul>
+  <li>History
+    <ul>
+      <li>ancestry DAG</li>
+    </ul>
+  </li>
+  <li>Merging
+    <ul>
+      <li>choosing an ancestor</li>
+      <li>conflict detection and handling</li>
+    </ul>
+  </li>
+  <li>Synchronisation
+    <ul>
+      <li>copying history between repositories</li>
+      <li>network transfer, file system, ...</li>
+    </ul>
+  </li>
+  <li>Storage
+    <ul>
+      <li>of file versions</li>
+      <li>of changesets/patches</li>
+    </ul>
+  </li>
+</ul>
+</div>
+
+<div class="slide">
+<h1>History</h1>
+<p>
+  History is a DAG of changesets.
+</p>
+<p>
+  Each changeset should record
+</p>
+<ul>
+  <li>Its own unique identity (a UUID)</li>
+  <li>Which specific versions of files are alive, with their paths and metadata</li>
+  <li>Which files are dead (deleted)</li>
+  <li>IDs of parent changeset(s)</li>
+  <li>Timestamp, comment, committer, ...</li>
+</ul>
+<div class="handout">
+<p>
+  Many modern DVCSs use some function of the contents of an object to
+  identify the object, e.g. a SHA-1 hash. This has a lot of nice
+  properties, and is a good choice. JavaScript doesn't have
+  particularly good support for binary data, which makes hashing (and
+  canonical binary representations!) awkward, so I chose to use simple
+  random UUIDs for identifiers, instead.
+</p>
+</div>
+</div>
+
+<div class="slide">
+<h1>History</h1>
+<div class="center"><img src="history.png" alt="History DAG" /></div>
+</div>
+
+<div class="slide">
+<h1>Merging</h1>
+<ul>
+  <li>Resolution step</li>
+  <li>Merge step</li>
+  <li>Deciding what makes a good merge algorithm is an actively researched area</li>
+  <li>DieDieDieMerge</li>
+</ul>
+</div>
+
+<div class="slide">
+<h1>Synchronisation</h1>
+</div>
+
+<div class="slide">
+<h1>Storage</h1>
+<ul>
+  <li>Important properties: robust, efficient on-disk, efficient synchronisation, efficient retrieval of arbitrary versions</li>
+  <li>Narrow API - largely independent of the rest of the system (modulo optimisations)</li>
+  <li>compression</li>
+  <li>ACID properties</li>
+  <li>snapshots vs. deltas</li>
+</ul>
+</div>
+
+<div class="slide">
+<h1>The End</h1>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<div class="center">
+  <p><big>Any questions?</big></p>
+</div>
+</div>
+
+<div class="slide">
+<h1>Ambiguous LCA</h1>
+<p>&nbsp;</p>
+<div class="center"><img src="tricky.png" alt="Difficult LCA example" /></div>
+<div class="handout">
+<p>
+  Here's a problem case. The LCA of "e" and "i" is either "c" or
+  "h". Both "c" and "h" are two steps away from the root.
+</p>
+<p>
+  Note that the path from "e" to "i" through "c" is three steps long,
+  while the path through "h" is two steps long. This could mean that
+  "h" is a more suitable ancestor for use in 3-way merging.
+</p>
+<p>
+  The algorithm I've implemented is very naive and inefficient. It
+  also answers "c" or "h" depending on the order of arguments you give
+  it.
+</p>
+</div>
+</div>
+
+<div class="slide">
+<h1>Criss-cross Merge</h1>
+<div class="center"><img src="crisscross.png" alt="Criss-cross Merge Diagram" /></div>
+</div>
 
 </div>
 

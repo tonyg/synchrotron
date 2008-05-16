@@ -1,0 +1,18 @@
+digraph CrissCrossMerge {
+	node [height="0.2", width="0.5", margin="0"];
+//	graph [rankdir=LR];
+	a -> b1 -> b2;
+	a -> c1 -> c2;
+	b1 -> c2;
+	c1 -> b2;
+	c2 -> "??" [style = "dashed"];
+	b2 -> "??" [style = "dashed"];
+
+	b2 [style = "filled", fillcolor = "#cccccc"];
+	c2 [style = "filled", fillcolor = "#cccccc"];
+
+	b1 [style = "filled", fillcolor = "#ff8888"];
+	c1 [style = "filled", fillcolor = "#ff8888"];
+
+	a [style = "filled", fillcolor = "#8888ff"];
+}
