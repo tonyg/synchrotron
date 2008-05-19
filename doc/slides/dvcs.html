@@ -63,7 +63,8 @@
     the pieces together (CVS, SVN, ...)
   </li>
   <li>
-    Merging is the most technically important bit
+    Merging is the most important bit for correctness; storage design
+    is important for usability
   </li>
   <li>
     Little Unix-style composable tools are the way to go (but user
@@ -337,16 +338,68 @@ var mergeResult = Diff.diff3_merge(derived1, base, derived2, true);
 
 <div class="slide">
 <h1>Synchronisation</h1>
+<ul>
+  <li>What do you know that I do not? ("pull")</li>
+  <li>What do I know that you do not? ("push")</li>
+  <li>Updating a working-copy is a separate operation (a merge)</li>
+  <li>Can synchronise using any transport or representation that can
+    <ul>
+      <li>inform others about the revision IDs it holds</li>
+      <li>export revisions and their contents in a standard form</li>
+      <li>import revisions submitted to them in standard form</li>
+    </ul>
+  </li>
+</ul>
+</div>
+
+<div class="slide">
+<h1>Storage</h1>
+<p>
+  The database used to store all information about current and past
+  state in the repository, in every branch, for every commit.
+</p>
+<ul>
+  <li>Design storage around query patterns: user interface is central</li>
+  <li>Design for efficient synchronisation with other repositories</li>
+  <li>Finally, efficient use of disk space can be important, too (less and less as time goes by)</li>
+</ul>
 </div>
 
 <div class="slide">
 <h1>Storage</h1>
 <ul>
-  <li>Important properties: robust, efficient on-disk, efficient synchronisation, efficient retrieval of arbitrary versions</li>
-  <li>Narrow API - largely independent of the rest of the system (modulo optimisations)</li>
-  <li>compression</li>
-  <li>ACID properties</li>
-  <li>snapshots vs. deltas</li>
+  <li>Narrow API - interface to merging, synchronisation, history is fairly simple</li>
+  <li>
+    Must be robust; should enjoy <a
+    href="http://en.wikipedia.org/wiki/ACID">ACID</a> properties
+  </li>
+  <li>Can use compression (e.g. gzip) under the covers</li>
+  <li>Can store full snapshots, or deltas from newer to older versions, or both, as required
+    <ul>
+      <li>tradeoff space/speed/convenience</li>
+      <li>
+	Mercurial does well here: deltas, with periodic snapshots when
+	deltas grow too large, giving O(1) arbitrary version retrieval
+      </li>
+    </ul>
+  </li>
+</ul>
+</div>
+
+<div class="slide">
+<h1>Storage</h1>
+<p>
+  Example user-interface-led design criteria:
+</p>
+<ul>
+  <li>retrieving an old version of a single file should be fast</li>
+  <li>retrieving snapshots of old versions of the whole repository should be fast</li>
+  <li>retrieving history for a single file or the whole repository should be fast</li>
+  <li>
+    avoid dragging in too many unrelated records when performing
+    single-file operations (think Wikipedia-scale system: how to
+    avoid querying the whole repo when viewing a single page?)
+  </li>
 </ul>
 </div>
 
