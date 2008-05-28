@@ -63,3 +63,27 @@ function demo_diff3_cooked(excludeFalseConflicts) {
     }
     f3(lines.join(" "));
 }
+
+function demo_diff3_dig_in() {
+    var merger = Diff.diff3_merge(f1(), f0(), f2(), false);
+    var lines = [];
+    for (var i = 0; i < merger.length; i++) {
+	var item = merger[i];
+	if (item.ok) {
+	    lines = lines.concat(item.ok);
+	} else {
+	    var c = Diff.diff_comm(item.conflict.a, item.conflict.b);
+	    for (var j = 0; j < c.length; j++) {
+		var inner = c[j];
+		if (inner.common) {
+		    lines = lines.concat(inner.common);
+		} else {
+		    lines = lines.concat(["\n<<<<<<<<<\n"], inner.file1,
+					 ["\n=========\n"], inner.file2,
+					 ["\n>>>>>>>>>\n"]);
+		}
+	    }
+	}
+    }
+    f3(lines.join(" "));
+}
