@@ -109,7 +109,6 @@
 <h1>Diff</h1>
 <ul>
   <li>Longest Common Subsequence
-    <button class="demobutton" onclick="diff_demo(); return false;">Demo</button>
     <pre>
 <span class="common">he</span><span class="removed">llo,</span><span class="common"> </span><span class="removed">w</span><span class="common">o</span><span class="removed">r</span><span class="common">ld</span>
 <span class="common">he</span><span class="inserted">ad  </span><span class="common"> </span><span class="inserted">c</span><span class="common">o</span> <span class="common">ld</span>
@@ -191,6 +190,11 @@ js> uneval(Diff.patch("head cold", delta).join(""))
 </div>
 
 <div class="slide">
+<h1>Diff Demo</h1>
+<button onclick="diff_demo(); return false;">Demo</button>
+</div>
+
+<div class="slide">
 <h1>Diff3 and Three-Way Merging</h1>
 <ul>
   <li>History-sensitive merge</li>
@@ -255,6 +259,11 @@ var mergeResult = Diff.diff3_merge(derived1, base, derived2, true);
                b:["some", "record"], bIndex:6}},
     {ok:["dog"]}] */
 </pre>
+</div>
+
+<div class="slide">
+<h1>Diff3 Demo</h1>
+<button onclick="diff3_demo(); return false;">Demo</button>
 </div>
 
 <div class="slide">
