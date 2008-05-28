@@ -10,3 +10,9 @@
 .B { background: #8888ff; }
 .G { background: #88ff88; }
 .R { background: #ff8888; }
+
+body { background: white url(RabbitMQLogo.png) 8px 8px no-repeat; }
+div#footer { background: white; }
+.slide h1 { left: 280px; background: white; color: black;
+       padding: 0; padding-top: 0.3em; }
+#controls #navLinks a { background: white; color: black; }
