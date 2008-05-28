@@ -23,7 +23,7 @@
  */
 
 Diff = {
-    longest_common_subsequence: function(file1, file2, postprocessor) {
+    longest_common_subsequence: function(file1, file2) {
 	/* Text diff algorithm following Hunt and McIlroy 1976.
          * J. W. Hunt and M. D. McIlroy, An algorithm for differential file
          * comparison, Bell Telephone Laboratories CSTR #41 (1976)
