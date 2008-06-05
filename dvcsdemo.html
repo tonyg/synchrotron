@@ -38,7 +38,8 @@
     <p>----</p>
     <button onclick="document.getElementById('log').innerHTML = ''">Clear</button>
     <button onclick="dumpRepo()">Dump Repo</button>
-    <pre id="log"></pre>
+    <button onclick="toggleLogVisible()">Hide/Show</button>
+    <pre class="invisible" id="log"></pre>
     <script type="text/javascript">dvcsdemo_main();</script>
   </body>
 </html>

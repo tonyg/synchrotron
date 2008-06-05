@@ -23,3 +23,7 @@ span.mergecommand {
 span.nonselected span.mergecommand { display: inline; }
 
 .deletedFile { display: none; }
+
+.invisible { display: none; }
+
+#log { border: solid black 1px; padding: 0.5em; background: #eee; }

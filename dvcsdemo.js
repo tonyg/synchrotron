@@ -33,7 +33,8 @@ function mark_dirty(newValue, comment) {
     dirty = newValue;
     document.getElementById("revertbutton").disabled = newValue ? "" : "disabled";
     document.getElementById("commitbutton").disabled = newValue ? "" : "disabled";
-    document.getElementById("statespan").innerHTML = comment ? comment : "";
+    document.getElementById("statespan").innerHTML = comment ? comment : (dirty ? "Files changed"
+									  : "");
 }
 
 function sync_view_of_fs() {
@@ -100,7 +101,7 @@ function maybeMergeRev(revId) {
 		}
 	    }
 	}
-	mark_dirty(true);
+	mark_dirty(true, "Merge in progress (merging "+revId+" into "+fs.directParent+")");
 	sync_view_of_fs();
     }
 }
@@ -182,6 +183,11 @@ function dvcsdemo_main() {
 
 function dumpRepo() {
     log(JSON.stringify(repo, null, 2));
+}
+
+function toggleLogVisible() {
+    var e = document.getElementById("log");
+    e.className = (e.className == "invisible") ? "" : "invisible";
 }
 
 function log() {
