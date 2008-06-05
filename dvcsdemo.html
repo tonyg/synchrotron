@@ -39,6 +39,13 @@
     <button onclick="document.getElementById('log').innerHTML = ''">Clear</button>
     <button onclick="dumpRepo()">Dump Repo</button>
     <button onclick="toggleLogVisible()">Hide/Show</button>
+    <select id="presetSelect" onchange="selectPreset();">
+      <option value="clear" selected="selected">----</option>
+      <option>preset1</option>
+      <option>preset2</option>
+      <option>preset3</option>
+      <option>ambiguousLCA</option>
+    </select>
     <pre class="invisible" id="log"></pre>
     <script type="text/javascript">dvcsdemo_main();</script>
   </body>
