@@ -7,10 +7,19 @@ noisyLoad("json2.js");
 noisyLoad("diff.js");
 noisyLoad("graph.js");
 noisyLoad("fs.js");
+noisyLoad("draw.js");
 
 Graph.Tests = {
-    _add: function(g, id, parentIds) {
-	g[id] = {id: id, parentIds: parentIds};
+    _add: function(g, id, parentIds, comment) {
+	if (!g[id]) { g[id] = {childIds: []}; }
+	g[id].id = id;
+	g[id].parentIds = parentIds;
+	g[id].comment = comment;
+	for (var i = 0; i < parentIds.length; i++) {
+	    var parentId = parentIds[i];
+	    if (!g[parentId]) { g[parentId] = {childIds: []}; }
+	    g[parentId].childIds.push(id);
+	}
     },
 
     _lca: function(g, id1, id2) {
@@ -31,7 +40,7 @@ Graph.Tests = {
 	print(Graph.Tests._lca(g, 'e', 'd'));
     },
 
-    t2: function () {
+    make_g: function () {
 	var g = {};
 	Graph.Tests._add(g, 'a', []);
 	Graph.Tests._add(g, 'b', ['a']);
@@ -43,6 +52,11 @@ Graph.Tests = {
 	Graph.Tests._add(g, 'h', ['g']);
 	Graph.Tests._add(g, 'i', ['c', 'h']);
 	Graph.Tests._add(g, 'j', ['i']);
+	return g;
+    },
+
+    t2: function () {
+	var g = Graph.Tests.make_g();
 	print("** t2");
 	print(Graph.Tests._lca(g, 'f', 'j'));
 	print(Graph.Tests._lca(g, 'j', 'f'));
@@ -82,6 +96,7 @@ Dvcs.Tests = {
 	    print(pp({repo: repo,
 		      fs: fs,
 		      allBranches: repo.allBranches()}));
+	    print(DrawDvcs.simpleRenderRepository(repo));
 	    print();
 	}
 
@@ -148,6 +163,8 @@ Dvcs.Tests = {
 		  fs: fs,
 		  allBranches: repo.allBranches()}));
 	print();
+
+	print(DrawDvcs.simpleRenderRepository(repo));
     }
 }
 

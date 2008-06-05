@@ -1,3 +1,25 @@
 body {
 	background: white;
 }
+
+span:hover {
+        background: red;
+	color: white;
+}
+
+span.dirty {
+	background: #888800;
+}
+
+span.clean {
+	background: #00ff00;
+}
+
+span.mergecommand {
+	color: blue;
+	display: none;
+}
+
+span.nonselected span.mergecommand { display: inline; }
+
+.deletedFile { display: none; }
