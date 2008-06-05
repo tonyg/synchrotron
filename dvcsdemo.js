@@ -33,8 +33,14 @@ function mark_dirty(newValue, comment) {
     dirty = newValue;
     document.getElementById("revertbutton").disabled = newValue ? "" : "disabled";
     document.getElementById("commitbutton").disabled = newValue ? "" : "disabled";
-    document.getElementById("statespan").innerHTML = comment ? comment : (dirty ? "Files changed"
-									  : "");
+    var stateSpan = document.getElementById("statespan");
+    if (dirty) {
+	if (comment != undefined || stateSpan.innerHTML == "")  {
+	    stateSpan.innerHTML = comment ? comment : "Files changed";
+	}
+    } else {
+	stateSpan.innerHTML = "";
+    }
 }
 
 function sync_view_of_fs() {
