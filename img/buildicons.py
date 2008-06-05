@@ -10,6 +10,8 @@ MID = WIDTH / 2.0
 BLOBRADIUS = WIDTH / 4.0
 LINEWIDTH = WIDTH / 12.0
 
+ENABLE_CROSSOVER = False
+
 surface = None
 ctx = None
 
@@ -46,7 +48,7 @@ def m(n):
 def k(n):
     if n & 1:
         ctx.move_to(MID, 0)
-        if n & 2:
+        if ENABLE_CROSSOVER and n & 2:
             ctx.line_to(MID, MID - BLOBRADIUS - LINEWIDTH / 4)
             ctx.stroke()
             ctx.move_to(MID, MID - LINEWIDTH / 4)
@@ -54,7 +56,7 @@ def k(n):
         ctx.stroke()
     if n & 2:
         ctx.move_to(0, MID)
-        if n & 1:
+        if ENABLE_CROSSOVER and n & 1:
             ctx.line_to(MID - BLOBRADIUS + LINEWIDTH, MID)
             ctx.curve_to(MID - BLOBRADIUS + LINEWIDTH, MID - BLOBRADIUS,
                          MID + BLOBRADIUS - LINEWIDTH, MID - BLOBRADIUS,
