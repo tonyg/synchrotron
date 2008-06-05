@@ -229,6 +229,14 @@ Dvcs.Repository.prototype.commit = function(fs, metadata) {
     return newRevId;
 }
 
+Dvcs.Repository.prototype.lookupParents = function (revId) {
+    var r = this.lookupRev(revId);
+    var result = [];
+    if (r.directParent) result.push(r.directParent);
+    if (r.additionalParent) result.push(r.additionalParent);
+    return result;
+}
+
 Dvcs.Repository.prototype.merge = function(r1, r2) {
     if (r1 == r2) {
 	return this.update(r1);
@@ -238,13 +246,7 @@ Dvcs.Repository.prototype.merge = function(r1, r2) {
     var rev2 = this.lookupRev(r2);
 
     var self = this;
-    function lookupParents(revId) {
-	var r = self.lookupRev(revId);
-	var result = [];
-	if (r.directParent) result.push(r.directParent);
-	if (r.additionalParent) result.push(r.additionalParent);
-	return result;
-    }
+    function lookupParents(revId) { return self.lookupParents(revId); }
 
     var ancestorRevId = Graph.least_common_ancestor(lookupParents, r1, r2);
     var ancestorRev = this.lookupRev(ancestorRevId, false);
