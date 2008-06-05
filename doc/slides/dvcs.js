@@ -5,3 +5,7 @@ function diff_demo() {
 function diff3_demo() {
     window.open("../../diff3demo.html");
 }
+
+function dvcs_demo() {
+    window.open("../../dvcsdemo.html");
+}
