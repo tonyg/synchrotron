@@ -425,3 +425,14 @@ Dvcs.Repository.prototype.allBranches = function() {
     }
     return branches;
 }
+
+Dvcs.Repository.prototype.childlessRevisions = function() {
+    var result = [];
+    for (var revId in this.revisions) {
+	var kids = this.children[revId] || [];
+	if (kids.length == 0) {
+	    result.push(revId);
+	}
+    }
+    return result;
+}

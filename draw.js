@@ -1,16 +1,9 @@
 DrawDvcs = {
     renderRepository: function (repo) {
-	var worklist = [];
-	var branches = repo.allBranches();
-	for (var branchName in branches) {
-	    if (branches[branchName].active) {
-		worklist = worklist.concat(branches[branchName].heads);
-	    }
-	}
-
 	var childCount = {};
 	var ordering = [];
 
+	var worklist = repo.childlessRevisions();
 	while (worklist.length) {
 	    var item = worklist.shift();
 	    ordering.push(item);

@@ -28,11 +28,12 @@ function set_rev_span(className) {
     }
 }
 
-function mark_dirty(newValue) {
+function mark_dirty(newValue, comment) {
     if (newValue && !dirty) { set_rev_span("dirty"); }
     dirty = newValue;
     document.getElementById("revertbutton").disabled = newValue ? "" : "disabled";
     document.getElementById("commitbutton").disabled = newValue ? "" : "disabled";
+    document.getElementById("statespan").innerHTML = comment ? comment : "";
 }
 
 function sync_view_of_fs() {
@@ -69,6 +70,9 @@ function sync_view_of_fs() {
 	inodeDiv.appendChild(contents);
     }
     set_rev_span(dirty ? "dirty" : "clean");
+
+    //document.getElementById("log").innerHTML = "";
+    dumpRepo();
 }
 
 function maybeSelectRev(revId) {
@@ -174,6 +178,10 @@ function dvcsdemo_main() {
 */
     redisplay_repository_history();
     sync_view_of_fs();
+}
+
+function dumpRepo() {
+    log(JSON.stringify(repo, null, 2));
 }
 
 function log() {
