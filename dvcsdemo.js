@@ -24,6 +24,7 @@
 var repo = new Dvcs.Repository();
 var fs = repo.update(null);
 var dirty = false;
+var mergeAncestor = null;
 
 function redisplay_repository_history() {
     var ordering = DrawDvcs.renderRepository(repo);
@@ -44,8 +45,8 @@ function redisplay_repository_history() {
 	"<p style='line-height: 0px; white-space: nowrap;'>" + html + "</p>";
 }
 
-function set_rev_span(className) {
-    var revSpan = document.getElementById(fs.directParent);
+function set_rev_span(className, revId) {
+    var revSpan = document.getElementById(revId || fs.directParent);
     if (revSpan) {
 	revSpan.className = className;
     }
@@ -130,6 +131,8 @@ function maybeMergeRev(revId) {
 		}
 	    }
 	}
+	set_rev_span("ancestor", m.ancestor);
+	mergeAncestor = m.ancestor;
 	mark_dirty(true, "Merge in progress (merging "+revId+" into "+fs.directParent+")");
 	sync_view_of_fs();
     }
@@ -152,6 +155,10 @@ function build_conflict_markers(merger) {
 
 function selectRev(revId) {
     set_rev_span("nonselected");
+    if (mergeAncestor) {
+	set_rev_span("nonselected", mergeAncestor);
+	mergeAncestor = null;
+    }
     fs = repo.update(revId);
     mark_dirty(false);
     sync_view_of_fs();

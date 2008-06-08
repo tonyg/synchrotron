@@ -302,7 +302,7 @@ Dvcs.Repository.prototype.merge = function(r1, r2) {
 	}
     }
 
-    return {files: fs, conflicts: conflicts};
+    return {files: fs, conflicts: conflicts, ancestor: ancestorRevId};
 }
 
 Dvcs.Repository.prototype.lookupMerger = function(prop) {

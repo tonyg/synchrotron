@@ -15,6 +15,10 @@ span.clean {
 	background: #00ff00;
 }
 
+span.ancestor {
+	background: #8888ff;
+}
+
 span.mergecommand {
 	color: blue;
 	display: none;
