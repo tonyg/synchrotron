@@ -421,6 +421,7 @@ presets.ambiguousLCA = function () {
 
     presets.clear();
     repo.importRevisions(repoExt);
+    fs = repo.update(repo.branchTip(null)); // null -> default branch
 }
 
 function selectPreset() {
