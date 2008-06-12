@@ -22,6 +22,8 @@
 // SOFTWARE.
 
 var Dvcs = {
+    _debugMode: false,
+
     Util: {
 	random_hex_string: function(n) {
 	    var digits = "0123456789abcdef";
@@ -33,12 +35,16 @@ var Dvcs = {
 	},
 
 	random_uuid: function() {
-	    return [Dvcs.Util.random_hex_string(8),
-		    Dvcs.Util.random_hex_string(4),
-		    "4" + Dvcs.Util.random_hex_string(3),
-		    ((Math.floor(Math.random() * 256) & ~64) | 128).toString(16) +
-		      Dvcs.Util.random_hex_string(2),
-		    Dvcs.Util.random_hex_string(12)].join("-");
+	    if (Dvcs._debugMode) {
+		return Dvcs.Util.random_hex_string(8);
+	    } else {
+		return [Dvcs.Util.random_hex_string(8),
+			Dvcs.Util.random_hex_string(4),
+			"4" + Dvcs.Util.random_hex_string(3),
+			((Math.floor(Math.random() * 256) & ~64) | 128).toString(16) +
+			Dvcs.Util.random_hex_string(2),
+			Dvcs.Util.random_hex_string(12)].join("-");
+	    }
 	},
 
 	dict_union: function(s1, s2) {
@@ -112,6 +118,7 @@ Dvcs.Mergers.Defaults["text"] = Dvcs.Mergers.simpleTextualMerger;
 
 Dvcs.Checkout.prototype.createFile = function() {
     var uuid = Dvcs.Util.random_uuid();
+    if (Dvcs._debugMode) { uuid = "inode-" + uuid; }
     this.inodes[uuid] = {};
     return uuid;
 }
@@ -222,6 +229,7 @@ Dvcs.Repository.prototype.commit = function(fs, metadata) {
     for (var inodeId in fs.inodes) {
 	if (fs.dirty[inodeId]) {
 	    var newBodyId = Dvcs.Util.random_uuid();
+	    if (Dvcs._debugMode) { newBodyId = "body-" + newBodyId; }
 	    this.bodies[newBodyId] = Dvcs.Util.deepCopy(fs.inodes[inodeId]);
 	    newAlive[inodeId] = newBodyId;
 	    newChanged.push(inodeId);
@@ -244,6 +252,7 @@ Dvcs.Repository.prototype.commit = function(fs, metadata) {
 		additionalParent: fs.additionalParent };
 
     var newRevId = Dvcs.Util.random_uuid();
+    if (Dvcs._debugMode) { newRevId = "rev-" + newRevId; }
     this.recordRevision(newRevId, rev);
 
     fs.directParent = newRevId;

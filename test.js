@@ -174,6 +174,7 @@ Dvcs.Tests = {
     }
 }
 
+Dvcs._debugMode = true;
 Graph.Tests.tests();
 Dvcs.Tests.Rt1();
 Dvcs.Tests.Rt2();
