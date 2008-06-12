@@ -480,16 +480,23 @@ Dvcs.Repository.prototype.childlessRevisions = function() {
 }
 
 Dvcs.Repository.prototype.fileRevisions = function(uuid) {
-    var result = [];
+    var result = {};
     for (var revId in this.revisions) {
 	var rev = this.revisions[revId];
 	for (var i = rev.changed.length - 1; i >= 0; i--) {
 	    if (uuid == rev.changed[i]) {
-		result.push(rev);
+		result[revId] = rev;
 		break;
 	    }
 	}
     }
+    return result;
+}
+
+Dvcs.Repository.prototype.fileRevisionsSortedByTimestamp = function(uuid) {
+    var m = this.fileRevisions(uuid);
+    var result = [];
+    for (var revId in m) { result.push(m[revId]); }
     result.sort(function (r1, r2) { return r1.timestamp - r2.timestamp; });
     return result;
 }
