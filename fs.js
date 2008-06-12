@@ -481,6 +481,6 @@ Dvcs.Repository.prototype.fileRevisions = function(uuid) {
 	    }
 	}
     }
-    result.sort(function (r1, r2) { return r2.timestamp - r1.timestamp; });
+    result.sort(function (r1, r2) { return r1.timestamp - r2.timestamp; });
     return result;
 }
