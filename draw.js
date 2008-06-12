@@ -142,11 +142,12 @@ DrawDvcs = {
 	var html = "";
 	for (var i = 0; i < ordering.length; i++) {
 	    var item = ordering[i];
+	    var rev = repo.lookupRev(item.revId);
 	    var pictures = item.pictures;
 	    for (var j = 0; j < pictures.length; j++) {
 		html = html + "<img src='img/" + pictures[j] + "' />";
 	    }
-	    html = html + " " + item.revId + "<br />\n";
+	    html = html+" "+item.revId+" ("+rev.branch+") "+(rev.metadata||{}).summary+"<br />\n";
 	}
 	return "<p style='line-height: 0px; white-space: nowrap;'>" + html + "</p>";
     }
