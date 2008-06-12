@@ -248,6 +248,7 @@ Dvcs.Repository.prototype.commit = function(fs, metadata) {
 
     fs.directParent = newRevId;
     fs.additionalParent = null;
+    fs.dirty = {};
 
     return newRevId;
 }
@@ -284,21 +285,30 @@ Dvcs.Repository.prototype.merge = function(r1, r2) {
     }
     for (var aliveInode in rev2.alive) {
 	if (fs.fileExists(aliveInode)) {
-	    var body0 = this.getBody(ancestorRev, aliveInode);
-	    var body1 = fs.inodes[aliveInode];
-	    var body2 = this.getBody(rev2, aliveInode);
-	    this.mergeBodies(body1, body0, body2,
-			     function (mergedBody) {
-				 fs.inodes[aliveInode] = mergedBody;
-				 fs.dirty[aliveInode] = aliveInode;
-			     },
-			     function (partialResult, conflictDetails) {
-				 conflicts.push({inode: aliveInode,
-						 partialResult: partialResult,
-						 conflictDetails: conflictDetails});
-			     });
+	    if (ancestorRev.alive[aliveInode] != rev1.alive[aliveInode] ||
+		ancestorRev.alive[aliveInode] != rev2.alive[aliveInode])
+	    {
+		// It has a different body from the ancestor in one or
+		// both of the revs being merged.
+		var body0 = this.getBody(ancestorRev, aliveInode);
+		var body1 = fs.inodes[aliveInode];
+		var body2 = this.getBody(rev2, aliveInode);
+		this.mergeBodies(body1, body0, body2,
+				 function (mergedBody) {
+				     fs.inodes[aliveInode] = mergedBody;
+				     fs.dirty[aliveInode] = aliveInode;
+				 },
+				 function (partialResult, conflictDetails) {
+				     conflicts.push({inode: aliveInode,
+						     partialResult: partialResult,
+						     conflictDetails: conflictDetails});
+				 });
+	    } else {
+		// It is unchanged. Leave it alone.
+	    }
 	} else if (!rev1.dead[aliveInode]) {
 	    fs.inodes[aliveInode] = this.getBody(rev2, aliveInode);
+	    fs.dirty[aliveInode] = aliveInode;
 	}
     }
 
@@ -457,5 +467,20 @@ Dvcs.Repository.prototype.childlessRevisions = function() {
 	    result.push(revId);
 	}
     }
+    return result;
+}
+
+Dvcs.Repository.prototype.fileRevisions = function(uuid) {
+    var result = [];
+    for (var revId in this.revisions) {
+	var rev = this.revisions[revId];
+	for (var i = rev.changed.length - 1; i >= 0; i--) {
+	    if (uuid == rev.changed[i]) {
+		result.push(rev);
+		break;
+	    }
+	}
+    }
+    result.sort(function (r1, r2) { return r2.timestamp - r1.timestamp; });
     return result;
 }

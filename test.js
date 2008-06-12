@@ -101,10 +101,13 @@ Dvcs.Tests = {
 	}
 
 	var fileA = fs.createFile();
+	var fileB = fs.createFile();
 	d("start");
 
 	fs.setProp(fileA, "name", "File A");
 	fs.setProp(fileA, "text", "A B C D E".split(/ /));
+	fs.setProp(fileB, "name", "File B");
+	fs.setProp(fileB, "text", ["One line"]);
 	var rA = repo.commit(fs);
 	d("post-rA");
 	fs.setBranch("BBB");
@@ -149,6 +152,9 @@ Dvcs.Tests = {
 	Dvcs.Tests.exportedJson = pp(repo.exportRevisions());
 	print(Dvcs.Tests.exportedJson);
 	print("---------------------------------------------------------------------------");
+
+	print(pp({fileArevs: repo.fileRevisions(fileA),
+		  fileBrevs: repo.fileRevisions(fileB)}));
     },
 
     Rt2: function() {
