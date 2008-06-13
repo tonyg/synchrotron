@@ -6,15 +6,15 @@ function demoMain() {
 
     openRabbitChannel(on_open, { debug: true, debugLogger: log });
     function on_open(c) {
-	channel = c;
-	log("on_open");
-	tron = new Synchrotron(channel, "synchrotron");
+        channel = c;
+        log("on_open");
+        tron = new Synchrotron(channel, "synchrotron");
 
-	try {
-	    try_patch();
-	} catch (e) {
-	    alert(e);
-	}
+        try {
+            try_patch();
+        } catch (e) {
+            alert(e);
+        }
     }
 }
 
@@ -31,6 +31,6 @@ function try_patch() {
     log({result2: Diff.diff3_merge(derived1, base, derived2, true)});
 
     for (var i = 0; i < 16; i++) {
-	log(random_uuid());
+        log(random_uuid());
     }
 }

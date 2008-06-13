@@ -25,94 +25,94 @@ var Dvcs = {
     _debugMode: false,
 
     Util: {
-	random_hex_string: function(n) {
-	    var digits = "0123456789abcdef";
-	    var result = "";
-	    for (var i = 0; i < n; i++) {
-		result = result + digits[Math.floor(Math.random() * 16)];
-	    }
-	    return result;
-	},
+        random_hex_string: function(n) {
+            var digits = "0123456789abcdef";
+            var result = "";
+            for (var i = 0; i < n; i++) {
+                result = result + digits[Math.floor(Math.random() * 16)];
+            }
+            return result;
+        },
 
-	random_uuid: function() {
-	    if (Dvcs._debugMode) {
-		return Dvcs.Util.random_hex_string(8);
-	    } else {
-		return [Dvcs.Util.random_hex_string(8),
-			Dvcs.Util.random_hex_string(4),
-			"4" + Dvcs.Util.random_hex_string(3),
-			((Math.floor(Math.random() * 256) & ~64) | 128).toString(16) +
-			Dvcs.Util.random_hex_string(2),
-			Dvcs.Util.random_hex_string(12)].join("-");
-	    }
-	},
+        random_uuid: function() {
+            if (Dvcs._debugMode) {
+                return Dvcs.Util.random_hex_string(8);
+            } else {
+                return [Dvcs.Util.random_hex_string(8),
+                        Dvcs.Util.random_hex_string(4),
+                        "4" + Dvcs.Util.random_hex_string(3),
+                        ((Math.floor(Math.random() * 256) & ~64) | 128).toString(16) +
+                        Dvcs.Util.random_hex_string(2),
+                        Dvcs.Util.random_hex_string(12)].join("-");
+            }
+        },
 
-	dict_union: function(s1, s2) {
-	    var result = {};
-	    var k;
-	    for (k in s2) { result[k] = s2[k]; }
-	    for (k in s1) { result[k] = s1[k]; }
-	    return result;
-	},
+        dict_union: function(s1, s2) {
+            var result = {};
+            var k;
+            for (k in s2) { result[k] = s2[k]; }
+            for (k in s1) { result[k] = s1[k]; }
+            return result;
+        },
 
-	dict_difference: function(s1, s2) {
-	    var result = {};
-	    var k;
-	    for (k in s1) { result[k] = s1[k]; }
-	    for (k in s2) { delete result[k]; }
-	    return result;
-	},
+        dict_difference: function(s1, s2) {
+            var result = {};
+            var k;
+            for (k in s1) { result[k] = s1[k]; }
+            for (k in s2) { delete result[k]; }
+            return result;
+        },
 
-	dict_to_set: function(d) {
-	    for (var k in d) { d[k] = 1; }
-	    return d;
-	},
+        dict_to_set: function(d) {
+            for (var k in d) { d[k] = 1; }
+            return d;
+        },
 
-	deepCopy: function(obj) {
-	    // Courtesy of
-	    // http://keithdevens.com/weblog/archive/2007/Jun/07/javascript.clone
-	    //
-	    // Does not handle recursive structures.
+        deepCopy: function(obj) {
+            // Courtesy of
+            // http://keithdevens.com/weblog/archive/2007/Jun/07/javascript.clone
+            //
+            // Does not handle recursive structures.
 
-	    if (obj === null || typeof(obj) != 'object') {
-		return obj;
-	    }
+            if (obj === null || typeof(obj) != 'object') {
+                return obj;
+            }
 
-	    var temp = obj.constructor();
-	    for (var key in obj) {
-		temp[key] = Dvcs.Util.deepCopy(obj[key]);
-	    }
-	    return temp;
-	}
+            var temp = obj.constructor();
+            for (var key in obj) {
+                temp[key] = Dvcs.Util.deepCopy(obj[key]);
+            }
+            return temp;
+        }
     },
 
     Mergers: {
-	simpleScalarMerger: function(v1, v0, v2) {
-	    if (v1 == v2) return [{ok: v1}];
-	    if (v1 == v0) return [{ok: v2}];
-	    if (v2 == v0) return [{ok: v1}];
-	    return [{conflict: {a: v1, o: v0, b: v2}}];
-	},
+        simpleScalarMerger: function(v1, v0, v2) {
+            if (v1 == v2) return [{ok: v1}];
+            if (v1 == v0) return [{ok: v2}];
+            if (v2 == v0) return [{ok: v1}];
+            return [{conflict: {a: v1, o: v0, b: v2}}];
+        },
 
-	simpleTextualMerger: function(v1, v0, v2) {
-	    return Diff.diff3_merge(v1, v0, v2, true);
-	},
+        simpleTextualMerger: function(v1, v0, v2) {
+            return Diff.diff3_merge(v1, v0, v2, true);
+        },
 
-	Defaults: {}
+        Defaults: {}
     },
 
     Checkout: function(directParent, additionalParent, currentBranch) {
-	this.inodes = {};
-	this.directParent = directParent;
-	this.additionalParent = additionalParent;
-	this.dirty = {};
-	this.currentBranch = currentBranch;
+        this.inodes = {};
+        this.directParent = directParent;
+        this.additionalParent = additionalParent;
+        this.dirty = {};
+        this.currentBranch = currentBranch;
     },
 
     Repository: function() {
-	this.bodies = {};
-	this.revisions = {};
-	this.children = {};
+        this.bodies = {};
+        this.revisions = {};
+        this.children = {};
     }
 };
 
@@ -159,35 +159,35 @@ Dvcs.Checkout.prototype.setBranch = function(newBranch) {
 
 Dvcs.Checkout.prototype.clone = function() {
     var result = new Dvcs.Checkout(this.directParent,
-				   this.additionalParent,
-				   this.currentBranch);
+                                   this.additionalParent,
+                                   this.currentBranch);
     result.inodes = Dvcs.Util.deepCopy(this.inodes);
     return result;
 };
 
 Dvcs.Repository.prototype.resolveRevId = function(revId) {
     if (this.revisions[revId]) {
-	return revId;
+        return revId;
     } else {
-	return this.branchTip(revId);
+        return this.branchTip(revId);
     }
 };
 
 Dvcs.Repository.prototype.lookupRev = function(revId, shouldResolve) {
     var candidate = this.revisions[revId];
     if (!candidate && (shouldResolve !== false)) {
-	// shouldResolve is an optional parameter, hence the odd test in the line above
-	candidate = this.revisions[this.branchTip(revId)];
+        // shouldResolve is an optional parameter, hence the odd test in the line above
+        candidate = this.revisions[this.branchTip(revId)];
     }
     return candidate
-	|| { alive: {},
-	     dead: {},
-	     changed: [],
-	     branch: null,
-	     timestamp: 0,
-	     metadata: null, 
-	     directParent: null,
-	     additionalParent: null };
+        || { alive: {},
+             dead: {},
+             changed: [],
+             branch: null,
+             timestamp: 0,
+             metadata: null, 
+             directParent: null,
+             additionalParent: null };
 };
 
 Dvcs.Repository.prototype.getBody = function(revRecord, aliveInodeId) {
@@ -200,21 +200,21 @@ Dvcs.Repository.prototype.update = function(unresolvedRevId) {
     var revId = this.resolveRevId(unresolvedRevId);
     var rev = this.revisions[revId];
     if (!rev) {
-	if (unresolvedRevId === null) {
-	    // meaning "default branch". We only get here if the user
-	    // asked for the default branch and there are currently no
-	    // commits at all in the repo. Hand back an empty
-	    // checkout.
-	    return new Dvcs.Checkout(null, null, null);
-	} else {
-	    // Couldn't find what the user asked for.
-	    return null;
-	}
+        if (unresolvedRevId === null) {
+            // meaning "default branch". We only get here if the user
+            // asked for the default branch and there are currently no
+            // commits at all in the repo. Hand back an empty
+            // checkout.
+            return new Dvcs.Checkout(null, null, null);
+        } else {
+            // Couldn't find what the user asked for.
+            return null;
+        }
     }
 
     var fs = new Dvcs.Checkout(revId, null, rev.branch);
     for (var inode in rev.alive) {
-	fs.inodes[inode] = this.getBody(rev, inode);
+        fs.inodes[inode] = this.getBody(rev, inode);
     }
     return fs;
 };
@@ -229,29 +229,29 @@ Dvcs.Repository.prototype.commit = function(fs, metadata) {
     var newChanged = [];
     var newAlive = {};
     for (var inodeId in fs.inodes) {
-	if (fs.dirty[inodeId]) {
-	    var newBodyId = Dvcs.Util.random_uuid();
-	    if (Dvcs._debugMode) { newBodyId = "body-" + newBodyId; }
-	    this.bodies[newBodyId] = Dvcs.Util.deepCopy(fs.inodes[inodeId]);
-	    newAlive[inodeId] = newBodyId;
-	    newChanged.push(inodeId);
-	} else {
-	    newAlive[inodeId] = oldAlive[inodeId];
-	}
+        if (fs.dirty[inodeId]) {
+            var newBodyId = Dvcs.Util.random_uuid();
+            if (Dvcs._debugMode) { newBodyId = "body-" + newBodyId; }
+            this.bodies[newBodyId] = Dvcs.Util.deepCopy(fs.inodes[inodeId]);
+            newAlive[inodeId] = newBodyId;
+            newChanged.push(inodeId);
+        } else {
+            newAlive[inodeId] = oldAlive[inodeId];
+        }
     }
 
     var newDead = Dvcs.Util.dict_to_set(Dvcs.Util.dict_union(oldDead,
-							     Dvcs.Util.dict_difference(oldAlive,
-										       newAlive)));
+                                                             Dvcs.Util.dict_difference(oldAlive,
+                                                                                       newAlive)));
 
     var rev = { alive: newAlive,
-		dead: newDead,
-		changed: newChanged,
-		branch: fs.getBranch(),
-		timestamp: (new Date()).getTime(),
-		metadata: metadata,
-		directParent: fs.directParent,
-		additionalParent: fs.additionalParent };
+                dead: newDead,
+                changed: newChanged,
+                branch: fs.getBranch(),
+                timestamp: (new Date()).getTime(),
+                metadata: metadata,
+                directParent: fs.directParent,
+                additionalParent: fs.additionalParent };
 
     var newRevId = Dvcs.Util.random_uuid();
     if (Dvcs._debugMode) { newRevId = "rev-" + newRevId; }
@@ -274,7 +274,7 @@ Dvcs.Repository.prototype.lookupParents = function (revId) {
 
 Dvcs.Repository.prototype.merge = function(r1, r2) {
     if (r1 == r2) {
-	return this.update(r1);
+        return this.update(r1);
     }
 
     var rev1 = this.lookupRev(r1);
@@ -292,35 +292,35 @@ Dvcs.Repository.prototype.merge = function(r1, r2) {
     var conflicts = [];
 
     for (var deadInode in rev2.dead) {
-	fs.deleteFile(deadInode);
+        fs.deleteFile(deadInode);
     }
     for (var aliveInode in rev2.alive) {
-	if (fs.fileExists(aliveInode)) {
-	    if (ancestorRev.alive[aliveInode] != rev1.alive[aliveInode] ||
-		ancestorRev.alive[aliveInode] != rev2.alive[aliveInode])
-	    {
-		// It has a different body from the ancestor in one or
-		// both of the revs being merged.
-		var body0 = this.getBody(ancestorRev, aliveInode);
-		var body1 = fs.inodes[aliveInode];
-		var body2 = this.getBody(rev2, aliveInode);
-		this.mergeBodies(body1, body0, body2,
-				 function (mergedBody) {
-				     fs.inodes[aliveInode] = mergedBody;
-				     fs.dirty[aliveInode] = aliveInode;
-				 },
-				 function (partialResult, conflictDetails) {
-				     conflicts.push({inode: aliveInode,
-						     partialResult: partialResult,
-						     conflictDetails: conflictDetails});
-				 });
-	    } else {
-		// It is unchanged. Leave it alone.
-	    }
-	} else if (!rev1.dead[aliveInode]) {
-	    fs.inodes[aliveInode] = this.getBody(rev2, aliveInode);
-	    fs.dirty[aliveInode] = aliveInode;
-	}
+        if (fs.fileExists(aliveInode)) {
+            if (ancestorRev.alive[aliveInode] != rev1.alive[aliveInode] ||
+                ancestorRev.alive[aliveInode] != rev2.alive[aliveInode])
+            {
+                // It has a different body from the ancestor in one or
+                // both of the revs being merged.
+                var body0 = this.getBody(ancestorRev, aliveInode);
+                var body1 = fs.inodes[aliveInode];
+                var body2 = this.getBody(rev2, aliveInode);
+                this.mergeBodies(body1, body0, body2,
+                                 function (mergedBody) {
+                                     fs.inodes[aliveInode] = mergedBody;
+                                     fs.dirty[aliveInode] = aliveInode;
+                                 },
+                                 function (partialResult, conflictDetails) {
+                                     conflicts.push({inode: aliveInode,
+                                                     partialResult: partialResult,
+                                                     conflictDetails: conflictDetails});
+                                 });
+            } else {
+                // It is unchanged. Leave it alone.
+            }
+        } else if (!rev1.dead[aliveInode]) {
+            fs.inodes[aliveInode] = this.getBody(rev2, aliveInode);
+            fs.dirty[aliveInode] = aliveInode;
+        }
     }
 
     return {files: fs, conflicts: conflicts, ancestor: ancestorRevId};
@@ -336,32 +336,32 @@ Dvcs.Repository.prototype.mergeBodies = function(bThis, bBase, bOther, kSuccess,
     var failures = {};
     var haveConflicts = false;
     for (var prop in props) {
-	var merger = this.lookupMerger(prop);
-	var mergedPropValue = merger(bThis[prop], bBase[prop], bOther[prop]);
-	if (mergedPropValue.length == 1 && mergedPropValue[0].ok) {
-	    bResult[prop] = mergedPropValue[0].ok;
-	} else {
-	    failures[prop] = mergedPropValue;
-	    haveConflicts = true;
-	}
+        var merger = this.lookupMerger(prop);
+        var mergedPropValue = merger(bThis[prop], bBase[prop], bOther[prop]);
+        if (mergedPropValue.length == 1 && mergedPropValue[0].ok) {
+            bResult[prop] = mergedPropValue[0].ok;
+        } else {
+            failures[prop] = mergedPropValue;
+            haveConflicts = true;
+        }
     }
 
     if (haveConflicts) {
-	return kConflict(bResult, failures);
+        return kConflict(bResult, failures);
     } else {
-	return kSuccess(bResult);
+        return kSuccess(bResult);
     }
 };
 
 Dvcs.Repository.prototype.recordRevision = function(newRevId, rev) {
     var self = this;
     function addChild(parentId) {
-	if (parentId === null) return;
-	if (!self.children[parentId]) {
-	    self.children[parentId] = [newRevId];
-	} else {
-	    self.children[parentId].push(newRevId);
-	}
+        if (parentId === null) return;
+        if (!self.children[parentId]) {
+            self.children[parentId] = [newRevId];
+        } else {
+            self.children[parentId].push(newRevId);
+        }
     }
     this.revisions[newRevId] = rev;
     addChild(rev.directParent);
@@ -370,34 +370,34 @@ Dvcs.Repository.prototype.recordRevision = function(newRevId, rev) {
 
 Dvcs.Repository.prototype.exportRevisions = function(revIds) {
     if (revIds) {
-	var revs = {};
-	for (var i = 0; i < revIds; i++) {
-	    var rev = this.revisions[revIds[i]];
-	    if (rev) revs[revIds[i]] = rev;
-	}
+        var revs = {};
+        for (var i = 0; i < revIds; i++) {
+            var rev = this.revisions[revIds[i]];
+            if (rev) revs[revIds[i]] = rev;
+        }
 
-	var bodies = {};
-	for (var revId in revs) {
-	    var alive = revs[revId].alive;
-	    for (var inodeId in alive) {
-		var bodyId = alive[inodeId];
-		bodies[bodyId] = this.bodies[bodyId];
-	    }
-	}
+        var bodies = {};
+        for (var revId in revs) {
+            var alive = revs[revId].alive;
+            for (var inodeId in alive) {
+                var bodyId = alive[inodeId];
+                bodies[bodyId] = this.bodies[bodyId];
+            }
+        }
 
-	return {revisions: revs, bodies: bodies};
+        return {revisions: revs, bodies: bodies};
     } else {
-	// Shortcut for all revisions. Be warned: shares structure!
-	return {revisions: this.revisions, bodies: this.bodies};
+        // Shortcut for all revisions. Be warned: shares structure!
+        return {revisions: this.revisions, bodies: this.bodies};
     }
 };
 
 Dvcs.Repository.prototype.importRevisions = function(e) {
     for (var bodyId in e.bodies) {
-	this.bodies[bodyId] = e.bodies[bodyId];
+        this.bodies[bodyId] = e.bodies[bodyId];
     }
     for (var revId in e.revisions) {
-	this.recordRevision(revId, e.revisions[revId]);
+        this.recordRevision(revId, e.revisions[revId]);
     }
 };
 
@@ -408,20 +408,20 @@ Dvcs.Repository.prototype.allRevisions = function() {
 Dvcs.Repository.prototype.branchHeads = function(branch) {
     var result = [];
     for (var revId in this.revisions) {
-	var rev = this.revisions[revId];
-	if (rev.branch == branch) {
-	    var hasChildrenWithinBranch = false;
-	    var kids = this.children[revId] || [];
-	    for (var i = 0; i < kids.length; i++) {
-		if (this.revisions[kids[i]].branch == branch) {
-		    hasChildrenWithinBranch = true;
-		    break;
-		}
-	    }
-	    if (!hasChildrenWithinBranch) {
-		result.push(revId);
-	    }
-	}
+        var rev = this.revisions[revId];
+        if (rev.branch == branch) {
+            var hasChildrenWithinBranch = false;
+            var kids = this.children[revId] || [];
+            for (var i = 0; i < kids.length; i++) {
+                if (this.revisions[kids[i]].branch == branch) {
+                    hasChildrenWithinBranch = true;
+                    break;
+                }
+            }
+            if (!hasChildrenWithinBranch) {
+                result.push(revId);
+            }
+        }
     }
     return result;
 };
@@ -431,12 +431,12 @@ Dvcs.Repository.prototype.branchTip = function(branch) {
     var newestRev = null;
     var branchHeads = this.branchHeads(branch);
     for (var i = 0; i < branchHeads.length; i++) {
-	var id = branchHeads[i];
-	var rev = this.lookupRev(id);
-	if (newestHead === null || newestRev.timestamp < rev.timestamp) {
-	    newestHead = id;
-	    newestRev = rev;
-	}
+        var id = branchHeads[i];
+        var rev = this.lookupRev(id);
+        if (newestHead === null || newestRev.timestamp < rev.timestamp) {
+            newestHead = id;
+            newestRev = rev;
+        }
     }
     return newestHead;
 };
@@ -444,28 +444,28 @@ Dvcs.Repository.prototype.branchTip = function(branch) {
 Dvcs.Repository.prototype.allBranches = function() {
     var branches = {};
     for (var revId in this.revisions) {
-	var rev = this.revisions[revId];
-	var branch = rev.branch;
-	var branchRecord = branches[branch];
-	if (!branchRecord) {
-	    branchRecord = { active: false, heads: [] };
-	    branches[branch] = branchRecord;
-	}
+        var rev = this.revisions[revId];
+        var branch = rev.branch;
+        var branchRecord = branches[branch];
+        if (!branchRecord) {
+            branchRecord = { active: false, heads: [] };
+            branches[branch] = branchRecord;
+        }
 
-	var hasChildrenWithinBranch = false;
-	var kids = this.children[revId] || [];
-	for (var i = 0; i < kids.length; i++) {
-	    if (this.revisions[kids[i]].branch == branch) {
-		hasChildrenWithinBranch = true;
-		break;
-	    }
-	}
-	if (!hasChildrenWithinBranch) {
-	    branchRecord.heads.push(revId);
-	    if (kids.length === 0) {
-		branchRecord.active = true;
-	    }
-	}
+        var hasChildrenWithinBranch = false;
+        var kids = this.children[revId] || [];
+        for (var i = 0; i < kids.length; i++) {
+            if (this.revisions[kids[i]].branch == branch) {
+                hasChildrenWithinBranch = true;
+                break;
+            }
+        }
+        if (!hasChildrenWithinBranch) {
+            branchRecord.heads.push(revId);
+            if (kids.length === 0) {
+                branchRecord.active = true;
+            }
+        }
     }
     return branches;
 };
@@ -473,10 +473,10 @@ Dvcs.Repository.prototype.allBranches = function() {
 Dvcs.Repository.prototype.childlessRevisions = function() {
     var result = [];
     for (var revId in this.revisions) {
-	var kids = this.children[revId] || [];
-	if (kids.length === 0) {
-	    result.push(revId);
-	}
+        var kids = this.children[revId] || [];
+        if (kids.length === 0) {
+            result.push(revId);
+        }
     }
     return result;
 };
@@ -484,13 +484,13 @@ Dvcs.Repository.prototype.childlessRevisions = function() {
 Dvcs.Repository.prototype.fileRevisions = function(uuid) {
     var result = {};
     for (var revId in this.revisions) {
-	var rev = this.revisions[revId];
-	for (var i = rev.changed.length - 1; i >= 0; i--) {
-	    if (uuid == rev.changed[i]) {
-		result[revId] = rev;
-		break;
-	    }
-	}
+        var rev = this.revisions[revId];
+        for (var i = rev.changed.length - 1; i >= 0; i--) {
+            if (uuid == rev.changed[i]) {
+                result[revId] = rev;
+                break;
+            }
+        }
     }
     return result;
 };
