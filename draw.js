@@ -49,10 +49,10 @@ DrawDvcs = {
 	var assignments = {};
 
 	function allocateSlot(item) {
-	    column = assignments[item];
+	    var column = assignments[item];
 	    if (typeof(column) != 'number') {
 		column = null;
-		for (j = 0; j < slots.length; j++) {
+		for (var j = 0; j < slots.length; j++) {
 		    if (slots[j] === null) {
 			column = j;
 			break;
