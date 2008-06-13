@@ -26,6 +26,8 @@ var fs = repo.update(null);
 var dirty = false;
 var mergeAncestor = null;
 
+Dvcs._debugMode = true;
+
 function redisplay_repository_history() {
     var ordering = DrawDvcs.renderRepository(repo);
     var html = "";
