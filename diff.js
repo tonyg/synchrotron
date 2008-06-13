@@ -30,10 +30,16 @@ Diff = {
          *
          * Expects two arrays of strings.
          */
+	var equivalenceClasses;
+	var file2indices;
+	var newCandidate;
+	var candidates;
+	var line;
+	var c, i, j, jX, r, s;
 
-	var equivalenceClasses = {};
-	for (var j = 0; j < file2.length; j++) {
-	    var line = file2[j];
+	equivalenceClasses = {};
+	for (j = 0; j < file2.length; j++) {
+	    line = file2[j];
 	    if (equivalenceClasses[line]) {
 		equivalenceClasses[line].push(j);
 	    } else {
@@ -41,21 +47,21 @@ Diff = {
 	    }
 	}
 
-	var candidates = [{file1index: -1,
-			   file2index: -1,
-			   chain: null}];
+	candidates = [{file1index: -1,
+		       file2index: -1,
+		       chain: null}];
 
-	for (var i = 0; i < file1.length; i++) {
-	    var line = file1[i];
-	    var file2indices = equivalenceClasses[line] || [];
+	for (i = 0; i < file1.length; i++) {
+	    line = file1[i];
+	    file2indices = equivalenceClasses[line] || [];
 
-	    var r = 0;
-	    var c = candidates[0];
+	    r = 0;
+	    c = candidates[0];
 
-	    for (var jX = 0; jX < file2indices.length; jX++) {
-		var j = file2indices[jX];
+	    for (jX = 0; jX < file2indices.length; jX++) {
+		j = file2indices[jX];
 
-		for (var s = 0; s < candidates.length; s++) {
+		for (s = 0; s < candidates.length; s++) {
 		    if ((candidates[s].file2index < j) &&
 			((s == candidates.length - 1) ||
 			 (candidates[s + 1].file2index > j)))
@@ -63,9 +69,9 @@ Diff = {
 		}
 
 		if (s < candidates.length) {
-		    var newCandidate = {file1index: i,
-					file2index: j,
-					chain: candidates[s]};
+		    newCandidate = {file1index: i,
+				    file2index: j,
+				    chain: candidates[s]};
 		    if (r == candidates.length) {
 			candidates.push(c);
 		    } else {
@@ -107,7 +113,7 @@ Diff = {
 	}
 
 	for (var candidate = Diff.longest_common_subsequence(file1, file2);
-	     candidate != null;
+	     candidate !== null;
 	     candidate = candidate.chain)
 	{
 	    var different = {file1: [], file2: []};
@@ -157,7 +163,7 @@ Diff = {
 	}
 
 	for (var candidate = Diff.longest_common_subsequence(file1, file2);
-	     candidate != null;
+	     candidate !== null;
 	     candidate = candidate.chain)
 	{
 	    var mismatchLength1 = tail1 - candidate.file1index - 1;
@@ -203,7 +209,8 @@ Diff = {
 
 	function copyCommon(targetOffset) {
 	    while (commonOffset < targetOffset) {
-		result.push(file[commonOffset++]);
+		result.push(file[commonOffset]);
+		commonOffset++;
 	    }
 	}
 
@@ -230,7 +237,7 @@ Diff = {
 	var tail2 = file2.length;
 
 	for (var candidate = Diff.longest_common_subsequence(file1, file2);
-	     candidate != null;
+	     candidate !== null;
 	     candidate = candidate.chain)
 	{
 	    var mismatchLength1 = tail1 - candidate.file1index - 1;
@@ -260,6 +267,7 @@ Diff = {
 	// Computer Science (FSTTCS), December 2007.
 	//
 	// (http://www.cis.upenn.edu/~bcpierce/papers/diff3-short.pdf)
+	var i;
 
 	var m1 = Diff.diff_indices(o, a);
 	var m2 = Diff.diff_indices(o, b);
@@ -268,8 +276,8 @@ Diff = {
 	function addHunk(h, side) {
 	    hunks.push([h.file1[0], side, h.file1[1], h.file2[0], h.file2[1]]);
 	}
-	for (var i = 0; i < m1.length; i++) { addHunk(m1[i], 0); }
-	for (var i = 0; i < m2.length; i++) { addHunk(m2[i], 2); }
+	for (i = 0; i < m1.length; i++) { addHunk(m1[i], 0); }
+	for (i = 0; i < m2.length; i++) { addHunk(m2[i], 2); }
 	hunks.sort();
 
 	var result = [];
@@ -301,7 +309,7 @@ Diff = {
 		}
 	    } else {
 		var regions = [a.length, -1, regionLhs, regionRhs, b.length, -1];
-		for (var i = firstHunkIndex; i <= hunkIndex; i++) {
+		for (i = firstHunkIndex; i <= hunkIndex; i++) {
 		    var side = hunks[i][1];
 		    var lhs = hunks[i][3];
 		    var rhs = lhs + hunks[i][4];
@@ -376,4 +384,4 @@ Diff = {
 	flushOk();
 	return result;
     }
-}
+};

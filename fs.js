@@ -49,15 +49,17 @@ var Dvcs = {
 
 	dict_union: function(s1, s2) {
 	    var result = {};
-	    for (var k in s2) { result[k] = s2[k]; }
-	    for (var k in s1) { result[k] = s1[k]; }
+	    var k;
+	    for (k in s2) { result[k] = s2[k]; }
+	    for (k in s1) { result[k] = s1[k]; }
 	    return result;
 	},
 
 	dict_difference: function(s1, s2) {
 	    var result = {};
-	    for (var k in s1) { result[k] = s1[k]; }
-	    for (var k in s2) { delete result[k]; }
+	    var k;
+	    for (k in s1) { result[k] = s1[k]; }
+	    for (k in s2) { delete result[k]; }
 	    return result;
 	},
 
@@ -72,7 +74,7 @@ var Dvcs = {
 	    //
 	    // Does not handle recursive structures.
 
-	    if (obj == null || typeof(obj) != 'object') {
+	    if (obj === null || typeof(obj) != 'object') {
 		return obj;
 	    }
 
@@ -112,7 +114,7 @@ var Dvcs = {
 	this.revisions = {};
 	this.children = {};
     }
-}
+};
 
 Dvcs.Mergers.Defaults["text"] = Dvcs.Mergers.simpleTextualMerger;
 
@@ -121,23 +123,23 @@ Dvcs.Checkout.prototype.createFile = function() {
     if (Dvcs._debugMode) { uuid = "inode-" + uuid; }
     this.inodes[uuid] = {};
     return uuid;
-}
+};
 
 Dvcs.Checkout.prototype.deleteFile = function(uuid) {
     if (!this.inodes[uuid]) return false;
     delete this.inodes[uuid];
     return true;
-}
+};
 
 Dvcs.Checkout.prototype.fileExists = function(uuid) {
     return !!(this.inodes[uuid]);
-}
+};
 
 Dvcs.Checkout.prototype.getProp = function(uuid, prop) {
     var inode = this.inodes[uuid];
     if (!inode) return null;
     return Dvcs.Util.deepCopy(inode[prop]);
-}
+};
 
 Dvcs.Checkout.prototype.setProp = function(uuid, prop, value) {
     var inode = this.inodes[uuid];
@@ -145,15 +147,15 @@ Dvcs.Checkout.prototype.setProp = function(uuid, prop, value) {
     inode[prop] = value;
     this.dirty[uuid] = uuid;
     return true;
-}
+};
 
 Dvcs.Checkout.prototype.getBranch = function() {
     return this.currentBranch;
-}
+};
 
 Dvcs.Checkout.prototype.setBranch = function(newBranch) {
     this.currentBranch = newBranch;
-}
+};
 
 Dvcs.Checkout.prototype.clone = function() {
     var result = new Dvcs.Checkout(this.directParent,
@@ -161,7 +163,7 @@ Dvcs.Checkout.prototype.clone = function() {
 				   this.currentBranch);
     result.inodes = Dvcs.Util.deepCopy(this.inodes);
     return result;
-}
+};
 
 Dvcs.Repository.prototype.resolveRevId = function(revId) {
     if (this.revisions[revId]) {
@@ -169,11 +171,11 @@ Dvcs.Repository.prototype.resolveRevId = function(revId) {
     } else {
 	return this.branchTip(revId);
     }
-}
+};
 
 Dvcs.Repository.prototype.lookupRev = function(revId, shouldResolve) {
     var candidate = this.revisions[revId];
-    if (!candidate && (shouldResolve != false)) {
+    if (!candidate && (shouldResolve !== false)) {
 	// shouldResolve is an optional parameter, hence the odd test in the line above
 	candidate = this.revisions[this.branchTip(revId)];
     }
@@ -186,19 +188,19 @@ Dvcs.Repository.prototype.lookupRev = function(revId, shouldResolve) {
 	     metadata: null, 
 	     directParent: null,
 	     additionalParent: null };
-}
+};
 
 Dvcs.Repository.prototype.getBody = function(revRecord, aliveInodeId) {
     var bodyId = revRecord.alive[aliveInodeId];
     if (!bodyId) return {};
     return Dvcs.Util.deepCopy(this.bodies[bodyId]);
-}
+};
 
 Dvcs.Repository.prototype.update = function(unresolvedRevId) {
     var revId = this.resolveRevId(unresolvedRevId);
     var rev = this.revisions[revId];
     if (!rev) {
-	if (unresolvedRevId == null) {
+	if (unresolvedRevId === null) {
 	    // meaning "default branch". We only get here if the user
 	    // asked for the default branch and there are currently no
 	    // commits at all in the repo. Hand back an empty
@@ -215,7 +217,7 @@ Dvcs.Repository.prototype.update = function(unresolvedRevId) {
 	fs.inodes[inode] = this.getBody(rev, inode);
     }
     return fs;
-}
+};
 
 Dvcs.Repository.prototype.commit = function(fs, metadata) {
     var directParentRev = this.lookupRev(fs.directParent);
@@ -260,7 +262,7 @@ Dvcs.Repository.prototype.commit = function(fs, metadata) {
     fs.dirty = {};
 
     return newRevId;
-}
+};
 
 Dvcs.Repository.prototype.lookupParents = function (revId) {
     var r = this.lookupRev(revId);
@@ -268,7 +270,7 @@ Dvcs.Repository.prototype.lookupParents = function (revId) {
     if (r.directParent) result.push(r.directParent);
     if (r.additionalParent) result.push(r.additionalParent);
     return result;
-}
+};
 
 Dvcs.Repository.prototype.merge = function(r1, r2) {
     if (r1 == r2) {
@@ -322,11 +324,11 @@ Dvcs.Repository.prototype.merge = function(r1, r2) {
     }
 
     return {files: fs, conflicts: conflicts, ancestor: ancestorRevId};
-}
+};
 
 Dvcs.Repository.prototype.lookupMerger = function(prop) {
     return Dvcs.Mergers.Defaults[prop] || Dvcs.Mergers.simpleScalarMerger;
-}
+};
 
 Dvcs.Repository.prototype.mergeBodies = function(bThis, bBase, bOther, kSuccess, kConflict) {
     var props = Dvcs.Util.dict_union(bThis, bOther);
@@ -349,12 +351,12 @@ Dvcs.Repository.prototype.mergeBodies = function(bThis, bBase, bOther, kSuccess,
     } else {
 	return kSuccess(bResult);
     }
-}
+};
 
 Dvcs.Repository.prototype.recordRevision = function(newRevId, rev) {
     var self = this;
     function addChild(parentId) {
-	if (parentId == null) return;
+	if (parentId === null) return;
 	if (!self.children[parentId]) {
 	    self.children[parentId] = [newRevId];
 	} else {
@@ -364,7 +366,7 @@ Dvcs.Repository.prototype.recordRevision = function(newRevId, rev) {
     this.revisions[newRevId] = rev;
     addChild(rev.directParent);
     addChild(rev.additionalParent);
-}
+};
 
 Dvcs.Repository.prototype.exportRevisions = function(revIds) {
     if (revIds) {
@@ -388,7 +390,7 @@ Dvcs.Repository.prototype.exportRevisions = function(revIds) {
 	// Shortcut for all revisions. Be warned: shares structure!
 	return {revisions: this.revisions, bodies: this.bodies};
     }
-}
+};
 
 Dvcs.Repository.prototype.importRevisions = function(e) {
     for (var bodyId in e.bodies) {
@@ -397,11 +399,11 @@ Dvcs.Repository.prototype.importRevisions = function(e) {
     for (var revId in e.revisions) {
 	this.recordRevision(revId, e.revisions[revId]);
     }
-}
+};
 
 Dvcs.Repository.prototype.allRevisions = function() {
     return Dvcs.Util.dict_to_set(this.revisions);
-}
+};
 
 Dvcs.Repository.prototype.branchHeads = function(branch) {
     var result = [];
@@ -422,7 +424,7 @@ Dvcs.Repository.prototype.branchHeads = function(branch) {
 	}
     }
     return result;
-}
+};
 
 Dvcs.Repository.prototype.branchTip = function(branch) {
     var newestHead = null;
@@ -431,16 +433,16 @@ Dvcs.Repository.prototype.branchTip = function(branch) {
     for (var i = 0; i < branchHeads.length; i++) {
 	var id = branchHeads[i];
 	var rev = this.lookupRev(id);
-	if (newestHead == null || newestRev.timestamp < rev.timestamp) {
+	if (newestHead === null || newestRev.timestamp < rev.timestamp) {
 	    newestHead = id;
 	    newestRev = rev;
 	}
     }
     return newestHead;
-}
+};
 
 Dvcs.Repository.prototype.allBranches = function() {
-    var branches = {}
+    var branches = {};
     for (var revId in this.revisions) {
 	var rev = this.revisions[revId];
 	var branch = rev.branch;
@@ -460,24 +462,24 @@ Dvcs.Repository.prototype.allBranches = function() {
 	}
 	if (!hasChildrenWithinBranch) {
 	    branchRecord.heads.push(revId);
-	    if (kids.length == 0) {
+	    if (kids.length === 0) {
 		branchRecord.active = true;
 	    }
 	}
     }
     return branches;
-}
+};
 
 Dvcs.Repository.prototype.childlessRevisions = function() {
     var result = [];
     for (var revId in this.revisions) {
 	var kids = this.children[revId] || [];
-	if (kids.length == 0) {
+	if (kids.length === 0) {
 	    result.push(revId);
 	}
     }
     return result;
-}
+};
 
 Dvcs.Repository.prototype.fileRevisions = function(uuid) {
     var result = {};
@@ -491,12 +493,4 @@ Dvcs.Repository.prototype.fileRevisions = function(uuid) {
 	}
     }
     return result;
-}
-
-Dvcs.Repository.prototype.fileRevisionsSortedByTimestamp = function(uuid) {
-    var m = this.fileRevisions(uuid);
-    var result = [];
-    for (var revId in m) { result.push(m[revId]); }
-    result.sort(function (r1, r2) { return r1.timestamp - r2.timestamp; });
-    return result;
-}
+};

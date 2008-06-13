@@ -3,10 +3,11 @@ function make_getter_setter(id, should_splitjoin) {
 	var elt = document.getElementById(id);
 	if (maybe_newval) {
 	    elt.value = should_splitjoin ? maybe_newval.join(" ") : maybe_newval;
+	    return undefined;
 	} else {
 	    return should_splitjoin ? elt.value.split(/ +/) : elt.value;
 	}
-    }
+    };
 }
 
 var f0 = make_getter_setter("f0", true);

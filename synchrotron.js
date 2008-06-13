@@ -4,7 +4,7 @@ function Synchrotron(channel, exchange, options) {
     this.options = {
 	routing_key: "",
 	exchange_type: "fanout",
-	should_declare_exchange: true,
+	should_declare_exchange: true
     };
     Object.extend(this.options, options || {});
     this.queueName = null;
@@ -16,7 +16,7 @@ function Synchrotron(channel, exchange, options) {
 Synchrotron.prototype.initialise_queue = function() {
     var self = this;
 
-    if (self.consumerTag != null) {
+    if (self.consumerTag !== null) {
 	self.channel.basicCancel(self.consumerTag)
 	.addCallback(function () {
 			 self.consumerTag = null;
@@ -28,7 +28,7 @@ Synchrotron.prototype.initialise_queue = function() {
 
     function maybe_delete_queue() {
 	log("maybe_delete_queue");
-	if (self.queueName != null) {
+	if (self.queueName !== null) {
 	    self.channel.queueDelete(self.queueName)
 	    .addCallback(function () {
 			     self.queueName = null;
@@ -74,7 +74,7 @@ Synchrotron.prototype.initialise_queue = function() {
     function on_consumer_setup_complete() {
 	log({on_consumer_setup_complete: self.consumerTag});
     }
-}
+};
 
 function log() {
     $A(arguments).each(function (arg) {

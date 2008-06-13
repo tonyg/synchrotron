@@ -25,20 +25,21 @@ DrawDvcs = {
     renderRepository: function (repo) {
 	var childCount = {};
 	var ordering = [];
+	var i, j, item, parent, column, row;
 
 	var worklist = repo.childlessRevisions();
 	while (worklist.length) {
-	    var item = worklist.shift();
+	    item = worklist.shift();
 	    ordering.push(item);
 
 	    var parents = repo.lookupParents(item);
-	    for (var i = 0; i < parents.length; i++) {
-		var parent = parents[i];
+	    for (i = 0; i < parents.length; i++) {
+		parent = parents[i];
 		if (childCount[parent] == undefined) {
 		    childCount[parent] = (repo.children[parent] || []).length;
 		}
 		childCount[parent] = childCount[parent] - 1;
-		if (childCount[parent] == 0) {
+		if (childCount[parent] === 0) {
 		    worklist.push(parent);
 		}
 	    }
@@ -48,16 +49,16 @@ DrawDvcs = {
 	var assignments = {};
 
 	function allocateSlot(item) {
-	    var column = assignments[item];
+	    column = assignments[item];
 	    if (typeof(column) != 'number') {
 		column = null;
-		for (var j = 0; j < slots.length; j++) {
-		    if (slots[j] == null) {
+		for (j = 0; j < slots.length; j++) {
+		    if (slots[j] === null) {
 			column = j;
 			break;
 		    }
 		}
-		if (column == null) {
+		if (column === null) {
 		    slots.push(item);
 		    column = slots.length - 1;
 		}
@@ -69,17 +70,17 @@ DrawDvcs = {
 	var cells = [];
 	var oldrow = [];
 
-	for (var i = 0; i < ordering.length; i++) {
-	    var item = ordering[i];
+	for (i = 0; i < ordering.length; i++) {
+	    item = ordering[i];
 	    var hasKid = typeof(assignments[item]) == 'number';
-	    var column = allocateSlot(item);
+	    column = allocateSlot(item);
 	    var parentIds = repo.lookupParents(item);
 	    var parentColumns = [];
 	    slots[column] = null;
 
-	    for (var j = 0; j < parentIds.length; j++) {
-		var parent = parentIds[j];
-		var c2 = (j == 0)
+	    for (j = 0; j < parentIds.length; j++) {
+		parent = parentIds[j];
+		var c2 = (j === 0)
 		    ? (typeof(assignments[parent]) == 'number'
 		       ? allocateSlot(parent)
 		       : column)
@@ -91,8 +92,8 @@ DrawDvcs = {
 
 	    finalAssignments.push(column);
 
-	    var row = [];
-	    for (var j = 0; j < slots.length; j++) {
+	    row = [];
+	    for (j = 0; j < slots.length; j++) {
 		var oldCell = (oldrow.length >= j ? oldrow[j] : 0);
 		if (oldCell & 16) {
 		    row[j] = (oldCell & 4) ? 1 : 0;
@@ -101,7 +102,7 @@ DrawDvcs = {
 		}
 	    }
 	    row[column] = 16 | (hasKid ? 1 : 0);
-	    for (var j = 0; j < parentColumns.length; j++) {
+	    for (j = 0; j < parentColumns.length; j++) {
 		var parentColumn = parentColumns[j];
 		var n1 = Math.min(parentColumn, column) + 1;
 		var n2 = Math.max(parentColumn, column);
@@ -120,14 +121,14 @@ DrawDvcs = {
 	}
 
 	var results = [];
-	for (var i = 0; i < ordering.length; i++) {
-	    var item = ordering[i];
-	    var column = finalAssignments[i];
+	for (i = 0; i < ordering.length; i++) {
+	    item = ordering[i];
+	    column = finalAssignments[i];
 
-	    var row = cells[i];
+	    row = cells[i];
 
 	    var result = {revId: item, pictures: []};
-	    for (var j = 0; j < row.length; j++) {
+	    for (j = 0; j < row.length; j++) {
 		var v = row[j];
 		result.pictures.push((v & 16 ? "blob_" : "stick_") + (v & 15) + ".png");
 	    }
@@ -151,4 +152,4 @@ DrawDvcs = {
 	}
 	return "<p style='line-height: 0px; white-space: nowrap;'>" + html + "</p>";
     }
-}
+};

@@ -59,7 +59,7 @@ function mark_dirty(newValue, comment) {
     document.getElementById("commitbutton").disabled = newValue ? "" : "disabled";
     var stateSpan = document.getElementById("statespan");
     if (dirty) {
-	if (comment != undefined || stateSpan.innerHTML == "")  {
+	if (comment != undefined || stateSpan.innerHTML === "")  {
 	    stateSpan.innerHTML = comment ? comment : "Files changed";
 	}
     } else {
@@ -79,7 +79,7 @@ function sync_view_of_fs() {
 	filename.onkeyup = function () {
 	    fs.setProp(inode, "name", filename.value);
 	    mark_dirty(true);
-	}
+	};
 	inodeDiv.appendChild(filename);
 	var deleteButton = document.createElement("button");
 	deleteButton.innerHTML = "Delete";
@@ -87,7 +87,7 @@ function sync_view_of_fs() {
 	    fs.deleteFile(inode);
 	    mark_dirty(true);
 	    inodeDiv.className = "deletedFile";
-	}
+	};
 	inodeDiv.appendChild(deleteButton);
 	inodeDiv.appendChild(document.createElement("br"));
 	var contents = document.createElement("textarea");
@@ -97,7 +97,7 @@ function sync_view_of_fs() {
 	contents.onkeyup = function () {
 	    fs.setProp(inode, "text", contents.value.split(/\n/));
 	    mark_dirty(true);
-	}
+	};
 	inodeDiv.appendChild(contents);
     }
     set_rev_span(dirty ? "dirty" : "clean");
@@ -201,7 +201,7 @@ var presets = {};
 presets.clear = function () {
     repo = new Dvcs.Repository();
     fs = repo.update(null);
-}
+};
 
 presets.preset1 = function () {
     presets.clear();
@@ -218,7 +218,7 @@ presets.preset1 = function () {
     fs.setProp(fileA, "name", "File A, renamed");
     fs.setProp(fileA, "text", "A B X D E".split(/ /));
     var rC = repo.commit(fs);
-}
+};
 
 presets.preset2 = function () {
     presets.clear();
@@ -239,7 +239,7 @@ presets.preset2 = function () {
     fs = repo.update(rB2);
     fs.setProp(fileA, "text", "A B Z D E G G G A B C D E".split(/ /));
     var rB3 = repo.commit(fs);
-}
+};
 
 presets.preset3 = function () {
     presets.clear();
@@ -265,7 +265,7 @@ presets.preset3 = function () {
     var rB3 = repo.commit(fs);
     var rMerger2 = repo.commit(repo.merge(rB3, rMerger).files);
     fs = repo.update(rMerger2);
-}
+};
 
 presets.ambiguousLCA = function () {
     var repoExt = {
@@ -422,7 +422,7 @@ presets.ambiguousLCA = function () {
     presets.clear();
     repo.importRevisions(repoExt);
     fs = repo.update(repo.branchTip(null)); // null -> default branch
-}
+};
 
 function selectPreset() {
     selectPresetNamed(document.getElementById("presetSelect").value);

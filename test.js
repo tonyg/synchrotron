@@ -77,7 +77,7 @@ Graph.Tests = {
 	Graph.Tests.t2();
 	Graph.Tests.t3();
     }
-}
+};
 
 
 Dvcs.Tests = {
@@ -172,7 +172,7 @@ Dvcs.Tests = {
 
 	print(DrawDvcs.simpleRenderRepository(repo));
     }
-}
+};
 
 Dvcs._debugMode = true;
 Graph.Tests.tests();
