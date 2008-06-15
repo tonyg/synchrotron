@@ -149,6 +149,12 @@ Dvcs.Checkout.prototype.setProp = function(uuid, prop, value) {
     return true;
 };
 
+Dvcs.Checkout.prototype.forEachFile = function(f) {
+    for (var uuid in this.inodes) {
+	f(uuid);
+    }
+};
+
 Dvcs.Checkout.prototype.getBranch = function() {
     return this.currentBranch;
 };
