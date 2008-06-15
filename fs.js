@@ -106,6 +106,7 @@ var Dvcs = {
         this.directParent = directParent;
         this.additionalParent = additionalParent;
         this.dirty = {};
+	this.anyDirty = false;
         this.currentBranch = currentBranch;
     },
 
@@ -118,16 +119,23 @@ var Dvcs = {
 
 Dvcs.Mergers.Defaults["text"] = Dvcs.Mergers.simpleTextualMerger;
 
+Dvcs.Checkout.prototype.setDirty = function(uuid) {
+    this.dirty[uuid] = uuid;
+    this.anyDirty = true;
+}
+
 Dvcs.Checkout.prototype.createFile = function() {
     var uuid = Dvcs.Util.random_uuid();
     if (Dvcs._debugMode) { uuid = "inode-" + uuid; }
     this.inodes[uuid] = {};
+    this.setDirty(uuid);
     return uuid;
 };
 
 Dvcs.Checkout.prototype.deleteFile = function(uuid) {
     if (!this.inodes[uuid]) return false;
     delete this.inodes[uuid];
+    this.anyDirty = true;
     return true;
 };
 
@@ -135,19 +143,48 @@ Dvcs.Checkout.prototype.fileExists = function(uuid) {
     return !!(this.inodes[uuid]);
 };
 
-Dvcs.Checkout.prototype.getProp = function(uuid, prop) {
+Dvcs.Checkout.prototype.hasProp = function(uuid, prop) {
     var inode = this.inodes[uuid];
     if (!inode) return null;
-    return Dvcs.Util.deepCopy(inode[prop]);
+    return (inode[prop] !== undefined);
+}
+
+Dvcs.Checkout.prototype.getProp = function(uuid, prop, defaultValue) {
+    var inode = this.inodes[uuid];
+    if (!inode) return null;
+    var v = inode[prop];
+    if (v === undefined) {
+	return defaultValue;
+    } else {
+	return Dvcs.Util.deepCopy(v);
+    }
 };
 
 Dvcs.Checkout.prototype.setProp = function(uuid, prop, value) {
     var inode = this.inodes[uuid];
     if (!inode) return false;
     inode[prop] = value;
-    this.dirty[uuid] = uuid;
+    this.setDirty(uuid);
     return true;
 };
+
+Dvcs.Checkout.prototype.clearProp = function(uuid, prop) {
+    var inode = this.inodes[uuid];
+    if (!inode) return null;
+    if (inode[prop] !== undefined) {
+	delete inode[prop];
+	this.setDirty(uuid);
+    }
+    return true;
+}
+
+Dvcs.Checkout.prototype.forEachProp = function(uuid, f) {
+    var inode = this.inodes[uuid];
+    if (!inode) return null;
+    for (var prop in inode) {
+	f(prop, inode[prop]);
+    }
+}
 
 Dvcs.Checkout.prototype.forEachFile = function(f) {
     for (var uuid in this.inodes) {
@@ -226,6 +263,10 @@ Dvcs.Repository.prototype.update = function(unresolvedRevId) {
 };
 
 Dvcs.Repository.prototype.commit = function(fs, metadata) {
+    if (!fs.anyDirty) {
+	return null;
+    }
+
     var directParentRev = this.lookupRev(fs.directParent);
     var additionalParentRev = this.lookupRev(fs.additionalParent);
 
@@ -266,6 +307,7 @@ Dvcs.Repository.prototype.commit = function(fs, metadata) {
     fs.directParent = newRevId;
     fs.additionalParent = null;
     fs.dirty = {};
+    fs.anyDirty = false;
 
     return newRevId;
 };
@@ -301,6 +343,7 @@ Dvcs.Repository.prototype.merge = function(r1, r2) {
 
     var fs = this.update(r1);
     fs.additionalParent = r2;
+    fs.anyDirty = true;
 
     var conflicts = [];
 
@@ -320,7 +363,7 @@ Dvcs.Repository.prototype.merge = function(r1, r2) {
                 this.mergeBodies(body1, body0, body2,
                                  function (mergedBody) {
                                      fs.inodes[aliveInode] = mergedBody;
-                                     fs.dirty[aliveInode] = aliveInode;
+				     fs.setDirty(aliveInode);
                                  },
                                  function (partialResult, conflictDetails) {
                                      conflicts.push({inode: aliveInode,
@@ -332,7 +375,7 @@ Dvcs.Repository.prototype.merge = function(r1, r2) {
             }
         } else if (!rev1.dead[aliveInode]) {
             fs.inodes[aliveInode] = this.getBody(rev2, aliveInode);
-            fs.dirty[aliveInode] = aliveInode;
+	    fs.setDirty(aliveInode);
         }
     }
 
