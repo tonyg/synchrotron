@@ -453,12 +453,29 @@ Dvcs.Repository.prototype.exportRevisions = function(revIds) {
 };
 
 Dvcs.Repository.prototype.importRevisions = function(e) {
+    var stats = {
+	bodyCount: 0,
+	bodyDups: 0,
+	revCount: 0,
+	revDups: 0
+    };
     for (var bodyId in e.bodies) {
-        this.bodies[bodyId] = e.bodies[bodyId];
+	if (!this.bodies[bodyId]) {
+            this.bodies[bodyId] = e.bodies[bodyId];
+	    stats.bodyCount++;
+	} else {
+	    stats.bodyDups++;
+	}
     }
     for (var revId in e.revisions) {
-        this.recordRevision(revId, e.revisions[revId]);
+	if (!this.revisions[revId]) {
+            this.recordRevision(revId, e.revisions[revId]);
+	    stats.revCount++;
+	} else {
+	    stats.revDups++;
+	}
     }
+    return stats;
 };
 
 Dvcs.Repository.prototype.allRevisions = function() {
