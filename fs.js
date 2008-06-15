@@ -278,11 +278,14 @@ Dvcs.Repository.prototype.lookupParents = function (revId) {
     return result;
 };
 
-Dvcs.Repository.prototype.merge = function(r1, r2) {
-    if (r1 == r2) {
-        return this.update(r1);
-    }
+Dvcs.Repository.prototype.canMerge = function(r1, r2) {
+    var self = this;
+    function lookupParents(revId) { return self.lookupParents(revId); }
+    var ancestorRevId = Graph.least_common_ancestor(lookupParents, r1, r2);
+    return !(r1 == ancestorRevId || r2 == ancestorRevId);
+}
 
+Dvcs.Repository.prototype.merge = function(r1, r2) {
     var rev1 = this.lookupRev(r1);
     var rev2 = this.lookupRev(r2);
 
@@ -291,6 +294,10 @@ Dvcs.Repository.prototype.merge = function(r1, r2) {
 
     var ancestorRevId = Graph.least_common_ancestor(lookupParents, r1, r2);
     var ancestorRev = this.lookupRev(ancestorRevId, false);
+
+    if (r1 == ancestorRevId || r2 == ancestorRevId) {
+	return null;
+    }
 
     var fs = this.update(r1);
     fs.additionalParent = r2;

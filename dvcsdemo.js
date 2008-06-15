@@ -116,27 +116,35 @@ function maybeSelectRev(revId) {
 
 function maybeMergeRev(revId) {
     if (!dirty) {
-        var m = repo.merge(fs.directParent, revId);
-        fs = m.files;
-        for (var i = 0; i < m.conflicts.length; i++) {
-            var conflictRecord = m.conflicts[i];
-            var inode = conflictRecord.inode;
-            for (var okProp in conflictRecord.partialResult) {
-                fs.setProp(inode, okProp, conflictRecord.partialResult[okProp]);
-            }
-            for (var badProp in conflictRecord.conflictDetails) {
-                var merger = conflictRecord.conflictDetails[badProp];
-                if (badProp == "name") {
-                    fs.setProp(inode, "name", merger[0].conflict.a + " / " + merger[0].conflict.b);
-                } else if (badProp == "text") {
-                    fs.setProp(inode, "text", build_conflict_markers(merger));
-                }
-            }
-        }
-        set_rev_span("ancestor", m.ancestor);
-        mergeAncestor = m.ancestor;
-        mark_dirty(true, "Merge in progress (merging "+revId+" into "+fs.directParent+")");
-        sync_view_of_fs();
+	if (!repo.canMerge(fs.directParent, revId)) {
+	    alert("Refusing to attempt merge with ancestor");
+	} else {
+            var m = repo.merge(fs.directParent, revId);
+	    if (m == null) {
+		alert("Attempted to merge with ancestor");
+	    } else {
+		fs = m.files;
+		for (var i = 0; i < m.conflicts.length; i++) {
+		    var conflictRecord = m.conflicts[i];
+		    var inode = conflictRecord.inode;
+		    for (var okProp in conflictRecord.partialResult) {
+			fs.setProp(inode, okProp, conflictRecord.partialResult[okProp]);
+		    }
+		    for (var badProp in conflictRecord.conflictDetails) {
+			var merger = conflictRecord.conflictDetails[badProp];
+			if (badProp == "name") {
+			    fs.setProp(inode, "name", merger[0].conflict.a + " / " + merger[0].conflict.b);
+			} else if (badProp == "text") {
+			    fs.setProp(inode, "text", build_conflict_markers(merger));
+			}
+		    }
+		}
+		set_rev_span("ancestor", m.ancestor);
+		mergeAncestor = m.ancestor;
+		mark_dirty(true, "Merge in progress (merging "+revId+" into "+fs.directParent+")");
+		sync_view_of_fs();
+	    }
+	}
     }
 }
 
