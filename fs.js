@@ -233,6 +233,10 @@ Dvcs.Repository.prototype.lookupRev = function(revId, shouldResolve) {
              additionalParent: null };
 };
 
+Dvcs.Repository.prototype.getMetadata = function(revId, shouldResolve) {
+    return this.lookupRev(revId, shouldResolve).metadata;
+};
+
 Dvcs.Repository.prototype.getBody = function(revRecord, aliveInodeId) {
     var bodyId = revRecord.alive[aliveInodeId];
     if (!bodyId) return {};
