@@ -32,6 +32,31 @@ function Synchrotron()
 
 Synchrotron.repositoryTiddlerTitle = '_synchrotronRepository';
 
+Synchrotron.prototype.importFromFile = function(path) {
+    var importStore = new TiddlyWiki();
+    var tw = loadFile(path);
+    if (window.netscape !== undefined) {
+	tw = convertUTF8ToUnicode(tw);
+    }
+    importStore.importTiddlyWiki(tw);
+    var repoTiddler = importStore.getTiddler(Synchrotron.repositoryTiddlerTitle);
+    if (!repoTiddler) {
+	alert("Repository Tiddler not found in " + path +
+	      "; is it really a Synchrotron-enabled TiddlyWiki?");
+	return;
+    }
+
+    var stats = this.import(repoTiddler.text);
+    if (stats) {
+	alert("Imported " + (stats.revCount || "no") + " new revisions." +
+	      (stats.revDups ?
+	       " The file" + (stats.revCount ? " also" : "") + " contained " + stats.revDups +
+	       " revisions that were already present in this TiddlyWiki."
+	       : ""));
+    }
+    refreshDisplay();
+};
+
 Synchrotron.prototype.export = function()
 {
 	var repoExt = this.repo.exportRevisions();
@@ -42,12 +67,13 @@ Synchrotron.prototype.export = function()
 
 Synchrotron.prototype.import = function(repoText)
 {
-	//#console.log('Synchrotron.import:'+repoText);
-	if(repoText) {
-		var repoExt = eval(repoText);
-		this.repo.importRevisions(repoExt);
-		this.checkout = this.repo.update(null);
-	}
+    //#console.log('Synchrotron.import:'+repoText);
+    if (repoText) {
+	var repoExt = eval(repoText);
+	return this.repo.importRevisions(repoExt);
+    } else {
+	return null;
+    }
 };
 
 Synchrotron.prototype.getUuid = function(tiddler) {
@@ -293,6 +319,7 @@ function restart()
 	restartSynchrotron();
 	revisionStore = new Synchrotron();
 	revisionStore.import(store.getTiddlerText(Synchrotron.repositoryTiddlerTitle));
+	revisionStore.checkout = revisionStore.repo.update(null);
 	revisionStore.syncUItoCheckout();
 }
 
@@ -362,6 +389,11 @@ config.macros.synchrotronHistory.handler = function(place) {
     var repo = revisionStore.repo;
     var ordering = DrawDvcs.renderRepository(repo);
 
+    createTiddlyButton(place,
+ 		       "Import...",
+ 		       "Import revisions from another TiddlyWiki file",
+		       config.macros.synchrotronHistory.importButtonClicked);
+
     var para = document.createElement("p");
     para.style.cssText = 'line-height: 0px; white-space: nowrap;';
 
@@ -390,6 +422,24 @@ config.macros.synchrotronHistory.handler = function(place) {
 	para.appendChild(document.createElement("br"));
     }
     place.appendChild(para);
+};
+
+config.macros.synchrotronHistory.importButtonClicked = function(event) {
+    var e = (event || window.event);
+    try {
+	netscape.security.PrivilegeManager.enablePrivilege("UniversalXPConnect");
+	var fp = Components.classes["@mozilla.org/filepicker;1"].createInstance(Components.interfaces.nsIFilePicker);
+	fp.init(window, "Choose a TiddlyWiki to import from", 0);
+	if (fp.show() == 0 && fp.file.exists()) {
+	    // OK clicked, and selected file exists.
+	    revisionStore.importFromFile(fp.file.path);
+	}
+    } catch (ex) {
+	alert(ex);
+    }
+    e.cancelBubble = true;
+    if (e.stopPropagation) e.stopPropagation();
+    return false;
 };
 
 config.macros.synchrotronHistory.revisionClicked = function(event) {
