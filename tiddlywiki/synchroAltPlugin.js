@@ -401,7 +401,7 @@ config.macros.synchrotronHistory.revisionClicked = function(event) {
 
     if (revId != revisionStore.checkout.directParent || store.isDirty()) {
 	createTiddlyButton(createTiddlyElement(popup, "li"),
-			   "Checkout",
+			   (revId == revisionStore.checkout.directParent) ? "Revert" : "Checkout",
 			   "Displays this revision as a base to edit from",
 			   function () {
 			       revisionStore.updateToRevision(revId);
