@@ -538,6 +538,8 @@ Dvcs.Repository.prototype.childlessRevisions = function() {
             result.push(revId);
         }
     }
+    var revs = this.revisions;
+    result.sort(function (r1, r2) { return revs[r2].timestamp - revs[r1].timestamp; });
     return result;
 };
 
