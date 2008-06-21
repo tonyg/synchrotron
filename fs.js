@@ -325,8 +325,8 @@ Dvcs.Repository.prototype.lookupParents = function (revId) {
 };
 
 Dvcs.Repository.prototype.canMerge = function(r1, r2) {
-    var self = this;
-    function lookupParents(revId) { return self.lookupParents(revId); }
+    var $elf = this;
+    function lookupParents(revId) { return $elf.lookupParents(revId); }
     var ancestorRevId = Graph.least_common_ancestor(lookupParents, r1, r2);
     return !(r1 == ancestorRevId || r2 == ancestorRevId);
 }
@@ -335,8 +335,8 @@ Dvcs.Repository.prototype.merge = function(r1, r2) {
     var rev1 = this.lookupRev(r1);
     var rev2 = this.lookupRev(r2);
 
-    var self = this;
-    function lookupParents(revId) { return self.lookupParents(revId); }
+    var $elf = this;
+    function lookupParents(revId) { return $elf.lookupParents(revId); }
 
     var ancestorRevId = Graph.least_common_ancestor(lookupParents, r1, r2);
     var ancestorRev = this.lookupRev(ancestorRevId, false);
@@ -414,13 +414,13 @@ Dvcs.Repository.prototype.mergeBodies = function(bThis, bBase, bOther, kSuccess,
 };
 
 Dvcs.Repository.prototype.recordRevision = function(newRevId, rev) {
-    var self = this;
+    var $elf = this;
     function addChild(parentId) {
         if (parentId === null) return;
-        if (!self.children[parentId]) {
-            self.children[parentId] = [newRevId];
+        if (!$elf.children[parentId]) {
+            $elf.children[parentId] = [newRevId];
         } else {
-            self.children[parentId].push(newRevId);
+            $elf.children[parentId].push(newRevId);
         }
     }
     this.revisions[newRevId] = rev;

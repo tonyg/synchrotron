@@ -14,12 +14,12 @@ function Synchrotron(channel, exchange, options) {
 }
 
 Synchrotron.prototype.initialise_queue = function() {
-    var self = this;
+    var $elf = this;
 
-    if (self.consumerTag !== null) {
-        self.channel.basicCancel(self.consumerTag)
+    if ($elf.consumerTag !== null) {
+        $elf.channel.basicCancel($elf.consumerTag)
         .addCallback(function () {
-                         self.consumerTag = null;
+                         $elf.consumerTag = null;
                          maybe_delete_queue();
                      });
     } else {
@@ -28,10 +28,10 @@ Synchrotron.prototype.initialise_queue = function() {
 
     function maybe_delete_queue() {
         log("maybe_delete_queue");
-        if (self.queueName !== null) {
-            self.channel.queueDelete(self.queueName)
+        if ($elf.queueName !== null) {
+            $elf.channel.queueDelete($elf.queueName)
             .addCallback(function () {
-                             self.queueName = null;
+                             $elf.queueName = null;
                              maybe_declare_exchange();
                          });
         } else {
@@ -40,8 +40,8 @@ Synchrotron.prototype.initialise_queue = function() {
     }
     function maybe_declare_exchange() {
         log("maybe_declare_exchange");
-        if (self.options.should_declare_exchange) {
-            self.channel.exchangeDeclare(self.exchange, self.options.exchange_type)
+        if ($elf.options.should_declare_exchange) {
+            $elf.channel.exchangeDeclare($elf.exchange, $elf.options.exchange_type)
             .addCallback(declare_queue);
         } else {
             declare_queue();
@@ -49,30 +49,30 @@ Synchrotron.prototype.initialise_queue = function() {
     }
     function declare_queue() {
         log("declare_queue");
-        self.channel.queueDeclare()
+        $elf.channel.queueDeclare()
         .addCallback(on_queue_declared);
     }
     function on_queue_declared(queueName) {
         log({on_queue_declared: queueName});
-        self.queueName = queueName;
-        self.channel.queueBind(self.queueName, self.exchange, self.options.routing_key)
+        $elf.queueName = queueName;
+        $elf.channel.queueBind($elf.queueName, $elf.exchange, $elf.options.routing_key)
         .addCallback(on_queue_bound);
     }
     function on_queue_bound() {
         log("on_queue_bound");
-        self.channel.basicConsume(self.queueName,
+        $elf.channel.basicConsume($elf.queueName,
                                   {
                                       consumeOk: function(tag) {
-                                          self.consumerTag = tag;
+                                          $elf.consumerTag = tag;
                                       },
                                       deliver: function(delivery) {
-                                          self.handleDelivery(delivery);
+                                          $elf.handleDelivery(delivery);
                                       }
                                   })
         .addCallback(on_consumer_setup_complete);
     }
     function on_consumer_setup_complete() {
-        log({on_consumer_setup_complete: self.consumerTag});
+        log({on_consumer_setup_complete: $elf.consumerTag});
     }
 };
 
