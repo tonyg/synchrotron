@@ -1,0 +1,14 @@
+scalar merge gives: OK Scalar | Conflict (Scalar ** 3)
+
+text merge gives: [ (OK [String] | Conflict ([String] ** 3)) ]
+  - stretchy
+  - ordered
+
+set merge gives: { OK: [Key], Conflicts: [(Key option) ** 3] }
+  - maybe-types
+  - unordered
+
+dict-as-object merge: { OK: [Key -> Scalar], Conflicts: [((Key -> Scalar) option) ** 3] }
+  - maybe-types
+  - unordered
+
