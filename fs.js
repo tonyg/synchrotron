@@ -64,8 +64,9 @@ var Dvcs = {
         },
 
         dict_to_set: function(d) {
-            for (var k in d) { d[k] = 1; }
-            return d;
+	    var result = {};
+            for (var k in d) { result[k] = 1; }
+            return result;
         },
 
         deepCopy: function(obj) {
