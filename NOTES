@@ -12,3 +12,16 @@ dict-as-object merge: { OK: [Key -> Scalar], Conflicts: [((Key -> Scalar) option
   - maybe-types
   - unordered
 
+Let's unify set and dict merges:
+	{ OK: {Key: Value, ...}, Conflicts: {Key: ((Scalar option) ** 3), ...} }
+
+Let's make scalar merge a bit more similar:
+	{ OK: Scalar, Conflicts: (Scalar ** 3) }
+
+For a totally clean merge, let's return the data structure itself in "ok":
+	{ mergerName: "scalar"|"text"|"object", ok: Scalar-or-list-or-dict }
+For a merge with conflicts, let's return:
+	{ mergerName: "scalar", conflict: {a: Scalar, o: Scalar, b: Scalar} }
+	{ mergerName: "text", result: [{ok:}, {conflict:}, ...] }
+	{ mergerName: "dict", partial: dict, conflicts: {key: MergeResult} }
+Note that dicts are the only things that can have nested merge results.

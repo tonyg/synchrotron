@@ -89,17 +89,83 @@ var Mc = {
 
     Mergers: {
         simpleScalarMerger: function(v1, v0, v2) {
-            if (v1 == v2) return [{ok: v1}];
-            if (v1 == v0) return [{ok: v2}];
-            if (v2 == v0) return [{ok: v1}];
-            return [{conflict: {a: v1, o: v0, b: v2}}];
+            if (v1 == v2) return {mergerName: "scalar", ok: v1};
+            if (v1 == v0) return {mergerName: "scalar", ok: v2};
+            if (v2 == v0) return {mergerName: "scalar", ok: v1};
+            return {mergerName: "scalar", conflict: {a: v1, o: v0, b: v2}};
         },
 
         simpleTextualMerger: function(v1, v0, v2) {
-            return Diff.diff3_merge(v1, v0, v2, true);
+            var mergeResult = Diff.diff3_merge(v1, v0, v2, true);
+	    if (mergeResult.length == 1 && ("ok" in mergeResult[0])) {
+		return {mergerName: "text", ok: mergeResult[0].ok};
+	    } else {
+		return {mergerName: "text", result: mergeResult};
+	    }
         },
 
-	Directory: {}
+	simpleObjectMerger: function(v1, v0, v2, mergerTable) {
+	    var props = Mc.Util.dict_union(v1, v2);
+	    var bResult = {};
+	    var failures = {};
+	    var haveConflicts = false;
+	    if (!mergerTable) {
+		mergerTable = Mc.Mergers.SimpleObjectMergerDefaults;
+	    }
+	    for (var prop in props) {
+		var merger = mergerTable[prop] || Mc.Mergers.simpleScalarMerger;
+		var mergedPropValue = merger(v1[prop], v0[prop], v2[prop]);
+		if (("ok" in mergedPropValue) && (typeof(mergedPropValue.ok) != "undefined")) {
+		    bResult[prop] = mergedPropValue.ok;
+		} else {
+		    failures[prop] = mergedPropValue;
+		    haveConflicts = true;
+		}
+	    }
+
+	    if (haveConflicts) {
+		return {mergerName: "object", partial: bResult, conflicts: failures};
+	    } else {
+		return {mergerName: "object", ok: bResult};
+	    }
+	},
+
+	basicIndexMerger: function(v1, ignored_v0, v2) {
+	    // We don't need to examine v0 at all here.
+	    var result = new Mc.Index(v1.repo);
+	    var conflicts = {};
+	    var haveConflicts = false;
+
+	    result.dead = Mc.Util.dict_union(v1.dead, v2.dead);
+
+	    var aliveKeys = Mc.Util.dict_union(v1.alive, v2.alive);
+	    for (var aliveKey in aliveKeys) {
+		if (!result.dead[aliveKey]) {
+		    var v1a = v1.alive[aliveKey];
+		    var v2a = v2.alive[aliveKey];
+		    if (v1a == v2a) {
+			result.alive[aliveKey] = v1a;
+		    } else {
+			var mergeResult = result.repo.merge(v1a, v2a);
+			if ("ok" in mergeResult) {
+			    result.alive[aliveKey] = mergeResult.mergeBlobId;
+			} else {
+			    haveConflicts = true;
+			    conflicts[aliveKey] = {a: v1a, b: v2a, details: mergeResult};
+			}
+		    }
+		}
+	    }
+
+	    if (haveConflicts) {
+		return {mergerName: "index", partial: result, conflicts: conflicts};
+	    } else {
+		return {mergerName: "index", ok: result};
+	    }
+	},
+
+	Directory: {},
+	SimpleObjectMergerDefaults: {}
     },
 
     make_versionable: function(blob, id, mergerName, directParent, additionalParent) {
@@ -120,38 +186,83 @@ var Mc = {
     Repository: function() {
 	this.blobs = {};
 	this.tags = {};
-    }
+    },
+
+    Checkout: function(repo, blobIdOrTag) {
+	this.repo = repo;
+	this.dirty = {};
+	this.anyDirty = false;
+	this.originalIndexBlobId = repo.resolve(blobIdOrTag);
+	this.index = repo.lookup(this.originalIndexBlobId, false);
+	if (this.index.mc_version_data.mergerName != "index") {
+	    throw {message: "Cannot checkout blob that is not of index type",
+		   blobIdOrTag: blobIdOrTag};
+	}
+	this.index = this.index.clone();
+    },
 };
 
-Mc.Index.prototype.insert = function(uuid) {
-    delete this.dead[uuid];
-    this.alive[uuid] = 1;
+Mc.Mergers.Directory["scalar"] = Mc.Mergers.simpleScalarMerger;
+Mc.Mergers.Directory["text"] = Mc.Mergers.simpleTextualMerger;
+Mc.Mergers.Directory["object"] = Mc.Mergers.simpleObjectMerger;
+Mc.Mergers.Directory["index"] = Mc.Mergers.basicIndexMerger;
+
+Mc.Mergers.SimpleObjectMergerDefaults["text"] = Mc.Mergers.simpleTextualMerger;
+
+Mc.Index.prototype.clone = function() {
+    var result = new Mc.Index(this.repo);
+    result.alive = Mc.Util.deepCopy(this.alive);
+    result.dead = Mc.Util.deepCopy(this.dead);
+    return result;
+}
+
+Mc.Index.prototype.insert = function(value) {
+    var key = Mc.Util.random_uuid();
+    if (Mc._debugMode) { key = "indexkey-" + key; }
+    this.alive[key] = value;
+    return key;
 };
 
-Mc.Index.prototype.remove = function(uuid) {
-    if (!this.alive[uuid]) return false;
-    delete this.alive[uuid];
-    this.dead[uuid] = 1;
+Mc.Index.prototype.update = function(key, value) {
+    if (!this.alive[key]) return false;
+    this.alive[key] = value;
     return true;
 };
 
-Mc.Index.prototype.exists = function(uuid) {
-    return !!(this.alive[uuid]);
+Mc.Index.prototype.remove = function(key) {
+    if (!this.alive[key]) return false;
+    delete this.alive[key];
+    this.dead[key] = 1;
+    return true;
+};
+
+Mc.Index.prototype.exists = function(key) {
+    return !!(this.alive[key]);
+};
+
+Mc.Index.prototype.lookup = function(key) {
+    return this.repo.lookup(this.alive[key]);
 };
 
 Mc.Index.prototype.forEachBlob = function(f) {
-    for (var uuid in this.alive) {
-	f(uuid);
+    for (var key in this.alive) {
+	f(key, this.lookup(key));
+    }
+};
+
+Mc.Repository.prototype.resolve = function(blobIdOrTag) {
+    if (blobIdOrTag in this.blobs) {
+	return blobIdOrTag;
+    } else {
+	return this.tags[blobIdOrTag];
     }
 };
 
 Mc.Repository.prototype.lookup = function(blobIdOrTag, shouldResolve) {
-    var candidate = this.blobs[blobIdOrTag];
-    if (!candidate && (shouldResolve !== false)) {
-        // shouldResolve is an optional parameter, hence the odd test in the line above
-        candidate = this.blobs[this.tags[blobIdOrTag]];
-    }
-    return candidate || null;
+    // shouldResolve is an optional parameter defaulting to true,
+    // hence the odd test in the line below
+    var resolved = (shouldResolve !== false) ? this.resolve(blobIdOrTag) : blobIdOrTag;
+    return (resolved && this.blobs[resolved]) || null;
 };
 
 Mc.Repository.prototype.store = function(blob, mergerName, directParent, additionalParent) {
@@ -159,6 +270,7 @@ Mc.Repository.prototype.store = function(blob, mergerName, directParent, additio
     if (Mc._debugMode) { newBodyId = "blob-" + blobId; }
     Mc.make_versionable(blob, blobId, mergerName, directParent, additionalParent);
     this.blobs[blobId] = blob;
+    return blobId;
 };
 
 Mc.Repository.prototype.lookupParents = function (blobId) {
@@ -177,7 +289,7 @@ Mc.Repository.prototype.canMerge = function(b1, b2) {
     function lookupParents(blobId) { return $elf.lookupParents(blobId); }
     var ancestorBlobId = Graph.least_common_ancestor(lookupParents, b1, b2);
     return !(b1 == ancestorBlobId || b2 == ancestorBlobId);
-}
+};
 
 Mc.Repository.prototype.merge = function(b1, b2) {
     var blob1 = this.lookup(b1);
@@ -189,235 +301,157 @@ Mc.Repository.prototype.merge = function(b1, b2) {
     var ancestorBlobId = Graph.least_common_ancestor(lookupParents, b1, b2);
     var ancestorBlob = this.lookup(ancestorBlobId, false);
 
-    if (b1 == ancestorBlobId || b2 == ancestorBlobId) {
+    var mergerName = blob1.mc_version_data.mergerName;
+    if ((mergerName != blob2.mc_version_data.mergerName) ||
+	(mergerName != ancestorBlob.mc_version_data.mergerName))
+    {
+	throw {message: "Merger name mismatch",
+	       mergerNames: [{key: b1, name: mergerName},
+			     {key: ancestorBlobId, name: ancestorBlob.mc_version_data.mergerName},
+			     {key: b2, name: blob2.mc_version_data.mergerName}]};
+    }
+
+    if (b2 == ancestorBlobId) {
+	return {mergerName: mergerName, ok: blob1, mergeBlobId: b1};
+    }
+    if (b1 == ancestorBlobId) {
+	return {mergerName: mergerName, ok: blob2, mergeBlobId: b2};
+    }
+
+    var merger = Mc.Mergers.Directory[mergerName];
+    if (!merger) {
+	throw {message: "Invalid Merger name",
+	       mergerName: mergerName};
+    }
+
+    var result = merger(blob1, ancestorBlob, blob2);
+    if ("ok" in result) {
+	result.mergeBlobId = this.store(result.ok,
+					result.mergerName,
+					b1,
+					b2);
+    }
+    return result;
+};
+
+Mc.Checkout.prototype.setDirty = function(uuid) {
+    this.dirty[uuid] = uuid;
+    this.anyDirty = true;
+};
+
+Mc.Checkout.prototype.createFile = function() {
+    var uuid = this.index.insert({});
+    this.setDirty(uuid);
+    return uuid;
+};
+
+Mc.Checkout.prototype.deleteFile = function(uuid) {
+    var result = this.index.remove(uuid);
+    if (result) this.anyDirty = true;
+    return result;
+};
+
+Mc.Checkout.prototype.fileExists = function(uuid) {
+    return this.index.exists(uuid);
+};
+
+Mc.Checkout.prototype.hasProp = function(uuid, prop) {
+    var inode = this.index.lookup(uuid);
+    if (!inode) return null;
+    return (inode[prop] !== undefined);
+};
+
+Mc.Checkout.prototype.getProp = function(uuid, prop, defaultValue) {
+    var inode = this.index.lookup(uuid);
+    if (!inode) return null;
+    var v = inode[prop];
+    if (v === undefined) {
+	return defaultValue;
+    } else {
+	return Mc.Util.deepCopy(v);
+    }
+};
+
+Mc.Checkout.prototype.setProp = function(uuid, prop, value) {
+    var inode = this.index.lookup(uuid);
+    if (!inode) return false;
+    inode[prop] = value;
+    this.setDirty(uuid);
+    return true;
+};
+
+Mc.Checkout.prototype.clearProp = function(uuid, prop) {
+    var inode = this.index.lookup(uuid);
+    if (!inode) return null;
+    if (inode[prop] !== undefined) {
+	delete inode[prop];
+	this.setDirty(uuid);
+    }
+    return true;
+};
+
+Mc.Checkout.prototype.forEachProp = function(uuid, f) {
+    var inode = this.index.lookup(uuid);
+    if (!inode) return null;
+    for (var prop in inode) {
+	f(prop, inode[prop]);
+    }
+    return true;
+};
+
+Mc.Checkout.prototype.forEachFile = function(f) {
+    this.index.forEachBlob(f);
+};
+
+Mc.Checkout.prototype.clone = function() {
+    var result = new Mc.Checkout(this.repo, this.originalIndexBlobId);
+    result.dirty = Mc.Util.deepCopy(this.dirty);
+    result.anyDirty = this.anyDirty;
+    result.index = this.index.clone();
+    return result;
+};
+
+Mc.Checkout.prototype.commit = function(checkout) {
+    if (!checkout.anyDirty) {
 	return null;
     }
 
-    var fs = this.update(b1);
-    fs.additionalParent = b2;
-    fs.anyDirty = true;
-
-    var conflicts = [];
-
-    for (var deadInode in blob2.dead) {
-        fs.deleteFile(deadInode);
-    }
-    for (var aliveInode in blob2.alive) {
-        if (fs.fileExists(aliveInode)) {
-            if (ancestorBlob.alive[aliveInode] != blob1.alive[aliveInode] ||
-                ancestorBlob.alive[aliveInode] != blob2.alive[aliveInode])
-            {
-                // It has a different body from the ancestor in one or
-                // both of the revs being merged.
-                var body0 = this.getBody(ancestorBlob, aliveInode);
-                var body1 = fs.inodes[aliveInode];
-                var body2 = this.getBody(blob2, aliveInode);
-                this.mergeBodies(body1, body0, body2,
-                                 function (mergedBody) {
-                                     fs.inodes[aliveInode] = mergedBody;
-				     fs.setDirty(aliveInode);
-                                 },
-                                 function (partialResult, conflictDetails) {
-                                     conflicts.push({inode: aliveInode,
-                                                     partialResult: partialResult,
-                                                     conflictDetails: conflictDetails});
-                                 });
-            } else {
-                // It is unchanged. Leave it alone.
-            }
-        } else if (!blob1.dead[aliveInode]) {
-            fs.inodes[aliveInode] = this.getBody(blob2, aliveInode);
-	    fs.setDirty(aliveInode);
-        }
-    }
-
-    return {files: fs, conflicts: conflicts, ancestor: ancestorBlobId};
-};
-
-Mc.Repository.prototype.lookupMerger = function(prop) {
-    return Mc.Mergers.BasicDefaults[prop] || Mc.Mergers.simpleScalarMerger;
-};
-
-Mc.Repository.prototype.mergeBodies = function(bThis, bBase, bOther, kSuccess, kConflict) {
-    var props = Mc.Util.dict_union(bThis, bOther);
-    var bResult = {};
-    var failures = {};
-    var haveConflicts = false;
-    for (var prop in props) {
-        var merger = this.lookupMerger(prop);
-        var mergedPropValue = merger(bThis[prop], bBase[prop], bOther[prop]);
-        if (mergedPropValue.length == 1 && mergedPropValue[0].ok) {
-            bResult[prop] = mergedPropValue[0].ok;
+    // HERE
+    var newChanged = [];
+    var newAlive = {};
+    for (var inodeId in fs.inodes) {
+        if (fs.dirty[inodeId]) {
+            var newBodyId = Dvcs.Util.random_uuid();
+            if (Dvcs._debugMode) { newBodyId = "body-" + newBodyId; }
+            this.bodies[newBodyId] = Dvcs.Util.deepCopy(fs.inodes[inodeId]);
+            newAlive[inodeId] = newBodyId;
+            newChanged.push(inodeId);
         } else {
-            failures[prop] = mergedPropValue;
-            haveConflicts = true;
+            newAlive[inodeId] = oldAlive[inodeId];
         }
     }
 
-    if (haveConflicts) {
-        return kConflict(bResult, failures);
-    } else {
-        return kSuccess(bResult);
-    }
-};
+    var newDead = Dvcs.Util.dict_to_set(Dvcs.Util.dict_union(oldDead,
+                                                             Dvcs.Util.dict_difference(oldAlive,
+                                                                                       newAlive)));
 
-Mc.Repository.prototype.recordRevision = function(newRevId, rev) {
-    var $elf = this;
-    function addChild(parentId) {
-        if (parentId === null) return;
-        if (!$elf.children[parentId]) {
-            $elf.children[parentId] = [newRevId];
-        } else {
-            $elf.children[parentId].push(newRevId);
-        }
-    }
-    this.revisions[newRevId] = rev;
-    addChild(rev.directParent);
-    addChild(rev.additionalParent);
-};
+    var rev = { alive: newAlive,
+                dead: newDead,
+                changed: newChanged,
+                branch: fs.getBranch(),
+                timestamp: (new Date()).getTime(),
+                metadata: metadata,
+                directParent: fs.directParent,
+                additionalParent: fs.additionalParent };
 
-Mc.Repository.prototype.exportRevisions = function(blobIds) {
-    if (blobIds) {
-        var revs = {};
-        for (var i = 0; i < blobIds; i++) {
-            var rev = this.revisions[blobIds[i]];
-            if (rev) revs[blobIds[i]] = rev;
-        }
+    var newRevId = Dvcs.Util.random_uuid();
+    if (Dvcs._debugMode) { newRevId = "rev-" + newRevId; }
+    this.recordRevision(newRevId, rev);
 
-        var bodies = {};
-        for (var blobId in revs) {
-            var alive = revs[blobId].alive;
-            for (var inodeId in alive) {
-                var bodyId = alive[inodeId];
-                bodies[bodyId] = this.bodies[bodyId];
-            }
-        }
+    fs.directParent = newRevId;
+    fs.additionalParent = null;
+    fs.dirty = {};
+    fs.anyDirty = false;
 
-        return {revisions: revs, bodies: bodies};
-    } else {
-        // Shortcut for all revisions. Be warned: shares structure!
-        return {revisions: this.revisions, bodies: this.bodies};
-    }
-};
-
-Mc.Repository.prototype.importRevisions = function(e) {
-    var stats = {
-	bodyCount: 0,
-	bodyDups: 0,
-	revCount: 0,
-	revDups: 0
-    };
-    for (var bodyId in e.bodies) {
-	if (!this.bodies[bodyId]) {
-            this.bodies[bodyId] = e.bodies[bodyId];
-	    stats.bodyCount++;
-	} else {
-	    stats.bodyDups++;
-	}
-    }
-    for (var blobId in e.revisions) {
-	if (!this.revisions[blobId]) {
-            this.recordRevision(blobId, e.revisions[blobId]);
-	    stats.revCount++;
-	} else {
-	    stats.revDups++;
-	}
-    }
-    return stats;
-};
-
-Mc.Repository.prototype.allRevisions = function() {
-    return Mc.Util.dict_to_set(this.revisions);
-};
-
-Mc.Repository.prototype.branchHeads = function(branch) {
-    var result = [];
-    for (var blobId in this.revisions) {
-        var rev = this.revisions[blobId];
-        if (rev.branch == branch) {
-            var hasChildrenWithinBranch = false;
-            var kids = this.children[blobId] || [];
-            for (var i = 0; i < kids.length; i++) {
-                if (this.revisions[kids[i]].branch == branch) {
-                    hasChildrenWithinBranch = true;
-                    break;
-                }
-            }
-            if (!hasChildrenWithinBranch) {
-                result.push(blobId);
-            }
-        }
-    }
-    return result;
-};
-
-Mc.Repository.prototype.branchTip = function(branch) {
-    var newestHead = null;
-    var newestRev = null;
-    var branchHeads = this.branchHeads(branch);
-    for (var i = 0; i < branchHeads.length; i++) {
-        var id = branchHeads[i];
-        var rev = this.lookup(id);
-        if (newestHead === null || newestRev.timestamp < rev.timestamp) {
-            newestHead = id;
-            newestRev = rev;
-        }
-    }
-    return newestHead;
-};
-
-Mc.Repository.prototype.allBranches = function() {
-    var branches = {};
-    for (var blobId in this.revisions) {
-        var rev = this.revisions[blobId];
-        var branch = rev.branch;
-        var branchRecord = branches[branch];
-        if (!branchRecord) {
-            branchRecord = { active: false, heads: [] };
-            branches[branch] = branchRecord;
-        }
-
-        var hasChildrenWithinBranch = false;
-        var kids = this.children[blobId] || [];
-        for (var i = 0; i < kids.length; i++) {
-            if (this.revisions[kids[i]].branch == branch) {
-                hasChildrenWithinBranch = true;
-                break;
-            }
-        }
-        if (!hasChildrenWithinBranch) {
-            branchRecord.heads.push(blobId);
-            if (kids.length === 0) {
-                branchRecord.active = true;
-            }
-        }
-    }
-    return branches;
-};
-
-Mc.Repository.prototype.childlessRevisions = function() {
-    var result = [];
-    for (var blobId in this.revisions) {
-        var kids = this.children[blobId] || [];
-        if (kids.length === 0) {
-            result.push(blobId);
-        }
-    }
-    var revs = this.revisions;
-    result.sort(function (b1, b2) { return revs[b2].timestamp - revs[b1].timestamp; });
-    return result;
-};
-
-Mc.Repository.prototype.fileRevisions = function(uuid) {
-    var result = {};
-    for (var blobId in this.revisions) {
-        var rev = this.revisions[blobId];
-        for (var i = rev.changed.length - 1; i >= 0; i--) {
-            if (uuid == rev.changed[i]) {
-                result[blobId] = rev;
-                break;
-            }
-        }
-    }
-    return result;
+    return newRevId;
 };
