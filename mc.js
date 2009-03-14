@@ -87,133 +87,139 @@ var Mc = {
         }
     },
 
-    Mergers: {
-        simpleScalarMerger: function(v1, v0, v2) {
-            if (v1 == v2) return {mergerName: "scalar", ok: v1};
-            if (v1 == v0) return {mergerName: "scalar", ok: v2};
-            if (v2 == v0) return {mergerName: "scalar", ok: v1};
-            return {mergerName: "scalar", conflict: {a: v1, o: v0, b: v2}};
-        },
+    ObjectTypes: {
+	simpleScalar: {
+	    merge: function(v1, v0, v2) {
+		if (v1 == v2) return {objectType: "scalar", ok: v1};
+		if (v1 == v0) return {objectType: "scalar", ok: v2};
+		if (v2 == v0) return {objectType: "scalar", ok: v1};
+		return {objectType: "scalar", conflict: {a: v1, o: v0, b: v2}};
+            }
+	},
 
-        simpleTextualMerger: function(v1, v0, v2) {
-            var mergeResult = Diff.diff3_merge(v1, v0, v2, true);
-	    if (mergeResult.length == 1 && ("ok" in mergeResult[0])) {
-		return {mergerName: "text", ok: mergeResult[0].ok};
-	    } else {
-		return {mergerName: "text", result: mergeResult};
-	    }
-        },
-
-	simpleObjectMerger: function(v1, v0, v2, mergerTable) {
-	    var props = Mc.Util.dict_union(v1, v2);
-	    var bResult = {};
-	    var failures = {};
-	    var haveConflicts = false;
-	    if (!mergerTable) {
-		mergerTable = Mc.Mergers.SimpleObjectMergerDefaults;
-	    }
-	    for (var prop in props) {
-		var merger = mergerTable[prop] || Mc.Mergers.simpleScalarMerger;
-		var mergedPropValue = merger(v1[prop], v0[prop], v2[prop]);
-		if (("ok" in mergedPropValue) && (typeof(mergedPropValue.ok) != "undefined")) {
-		    bResult[prop] = mergedPropValue.ok;
+        simpleText: {
+	    merge: function(v1, v0, v2) {
+		var mergeResult = Diff.diff3_merge(v1, v0, v2, true);
+		if (mergeResult.length == 1 && ("ok" in mergeResult[0])) {
+		    return {objectType: "text", ok: mergeResult[0].ok};
 		} else {
-		    failures[prop] = mergedPropValue;
-		    haveConflicts = true;
+		    return {objectType: "text", result: mergeResult};
 		}
-	    }
+            }
+	},
 
-	    if (haveConflicts) {
-		return {mergerName: "object", partial: bResult, conflicts: failures};
-	    } else {
-		return {mergerName: "object", ok: bResult};
+	simpleObject: {
+	    merge: function(v1, v0, v2, mergerTable) {
+		var props = Mc.Util.dict_union(v1, v2);
+		var bResult = {};
+		var failures = {};
+		var haveConflicts = false;
+		if (!mergerTable) {
+		    mergerTable = Mc.SimpleObjectMergerTable;
+		}
+		for (var prop in props) {
+		    var merger = mergerTable[prop] || Mc.ObjectTypes.simpleScalar.merge;
+		    var mergedPropValue = merger(v1[prop], v0[prop], v2[prop]);
+		    if (("ok" in mergedPropValue) && (typeof(mergedPropValue.ok) != "undefined")) {
+			bResult[prop] = mergedPropValue.ok;
+		    } else {
+			failures[prop] = mergedPropValue;
+			haveConflicts = true;
+		    }
+		}
+
+		if (haveConflicts) {
+		    return {objectType: "object", partial: bResult, conflicts: failures};
+		} else {
+		    return {objectType: "object", ok: bResult};
+		}
 	    }
 	},
 
-	basicIndexMerger: function(v1, ignored_v0, v2) {
-	    // We don't need to examine v0 at all here.
-	    var result = new Mc.Index(v1.repo);
-	    var conflicts = {};
-	    var haveConflicts = false;
+	basicIndex: {
+	    construct: function (repo) { return new Index(repo); },
+	    unpickle: function (constructed, blob, repo) {
+		constructed.loadFrom(blob);
+	    },
+	    merge: function(v1, ignored_v0, v2) {
+		// We don't need to examine v0 at all here.
+		var result = new Mc.Index(v1.repo());
+		var conflicts = {};
+		var haveConflicts = false;
 
-	    result.dead = Mc.Util.dict_union(v1.dead, v2.dead);
+		result.dead = Mc.Util.dict_union(v1.dead, v2.dead);
 
-	    var aliveKeys = Mc.Util.dict_union(v1.alive, v2.alive);
-	    for (var aliveKey in aliveKeys) {
-		if (!result.dead[aliveKey]) {
-		    var v1a = v1.alive[aliveKey];
-		    var v2a = v2.alive[aliveKey];
-		    if (v1a == v2a) {
-			result.alive[aliveKey] = v1a;
-		    } else {
-			var mergeResult = result.repo.merge(v1a, v2a);
-			if ("ok" in mergeResult) {
-			    result.alive[aliveKey] = mergeResult.mergeBlobId;
+		var aliveKeys = Mc.Util.dict_union(v1.alive, v2.alive);
+		for (var aliveKey in aliveKeys) {
+		    if (!result.dead[aliveKey]) {
+			var v1a = v1.alive[aliveKey];
+			var v2a = v2.alive[aliveKey];
+			if (v1a == v2a) {
+			    result.alive[aliveKey] = v1a;
 			} else {
-			    haveConflicts = true;
-			    conflicts[aliveKey] = {a: v1a, b: v2a, details: mergeResult};
+			    var mergeResult = result.repo().merge(v1a, v2a);
+			    if ("ok" in mergeResult) {
+				result.alive[aliveKey] = mergeResult.mergeBlobId;
+			    } else {
+				haveConflicts = true;
+				conflicts[aliveKey] = {a: v1a, b: v2a, details: mergeResult};
+			    }
 			}
 		    }
 		}
-	    }
 
-	    if (haveConflicts) {
-		return {mergerName: "index", partial: result, conflicts: conflicts};
-	    } else {
-		return {mergerName: "index", ok: result};
+		if (haveConflicts) {
+		    return {objectType: "index", partial: result, conflicts: conflicts};
+		} else {
+		    return {objectType: "index", ok: result};
+		}
 	    }
-	},
-
-	Directory: {},
-	SimpleObjectMergerDefaults: {}
+	}
     },
 
-    make_versionable: function(blob, id, mergerName, directParent, additionalParent) {
-	blob.mc_version_data = {
-	    id: id,
-	    mergerName: mergerName,
-	    directParent: directParent,
-	    additionalParent: additionalParent
-	};
-    },
+    TypeDirectory: {},
+    SimpleObjectMergerTable: {},
 
     Index: function(repo) {
 	this.alive = {};
 	this.dead = {};
-	this.repo = repo;
+	this.repo = function () { return repo; };
     },
 
     Repository: function() {
-	this.blobs = {};
-	this.tags = {};
+	this.repo_id = Mc.Util.random_uuid();
+	this.blobs = {}; // blobid -> blobrecord
+	this.tags = {}; // repoid/bookmarkname -> blobid
+	this.remotes = {}; // remotename -> remote_repo_id
+
+	var index = new Mc.Index(this);
+	this.tags[this.repo_id + "/master"] = this.store(index, "index").id;
     },
 
     Checkout: function(repo, blobIdOrTag) {
-	this.repo = repo;
+	this.repo = function () { return repo; }
 	this.dirty = {};
 	this.anyDirty = false;
 	this.originalIndexBlobId = repo.resolve(blobIdOrTag);
 	this.index = repo.lookup(this.originalIndexBlobId, false);
-	if (this.index.mc_version_data.mergerName != "index") {
+	if (this.index.objectType != "index") {
 	    throw {message: "Cannot checkout blob that is not of index type",
 		   blobIdOrTag: blobIdOrTag};
 	}
-	this.index = this.index.clone();
     },
 };
 
-Mc.Mergers.Directory["scalar"] = Mc.Mergers.simpleScalarMerger;
-Mc.Mergers.Directory["text"] = Mc.Mergers.simpleTextualMerger;
-Mc.Mergers.Directory["object"] = Mc.Mergers.simpleObjectMerger;
-Mc.Mergers.Directory["index"] = Mc.Mergers.basicIndexMerger;
+Mc.TypeDirectory["scalar"] = Mc.ObjectTypes.simpleScalar;
+Mc.TypeDirectory["text"] = Mc.ObjectTypes.simpleText;
+Mc.TypeDirectory["object"] = Mc.ObjectTypes.simpleObject;
+Mc.TypeDirectory["index"] = Mc.ObjectTypes.basicIndex;
 
-Mc.Mergers.SimpleObjectMergerDefaults["text"] = Mc.Mergers.simpleTextualMerger;
+Mc.SimpleObjectMergerTable["text"] = Mc.ObjectTypes.simpleText.merge;
 
-Mc.Index.prototype.clone = function() {
-    var result = new Mc.Index(this.repo);
-    result.alive = Mc.Util.deepCopy(this.alive);
-    result.dead = Mc.Util.deepCopy(this.dead);
-    return result;
+/*
+Mc.Index.prototype.loadFrom = function(blob) {
+    this.alive = Mc.Util.deepCopy(blob.alive);
+    this.dead = Mc.Util.deepCopy(blob.dead);
 }
 
 Mc.Index.prototype.insert = function(value) {
@@ -241,7 +247,7 @@ Mc.Index.prototype.exists = function(key) {
 };
 
 Mc.Index.prototype.lookup = function(key) {
-    return this.repo.lookup(this.alive[key]);
+    return this.repo().lookup(this.alive[key]);
 };
 
 Mc.Index.prototype.forEachBlob = function(f) {
@@ -249,11 +255,26 @@ Mc.Index.prototype.forEachBlob = function(f) {
 	f(key, this.lookup(key));
     }
 };
+*/
 
 Mc.Repository.prototype.resolve = function(blobIdOrTag) {
     if (blobIdOrTag in this.blobs) {
 	return blobIdOrTag;
     } else {
+	if (!blobIdOrTag) {
+	    blobIdOrTag = "master";
+	}
+
+	var slashPos = blobIdOrTag.indexOf("/");
+	if (slashPos == -1) {
+	    blobIdOrTag = this.repo_id + "/" + blobIdOrTag;
+	} else {
+	    var remoteName = blobIdOrTag.substring(0, slashPos);
+	    var bookmarkName = blobIdOrTag.substring(slashPos + 1);
+	    var repoId = this.remotes[remoteName];
+	    if (repoId) { remoteName = repoId; }
+	    blobIdOrTag = remoteName + "/" + bookmarkName;
+	}
 	return this.tags[blobIdOrTag];
     }
 };
@@ -265,12 +286,19 @@ Mc.Repository.prototype.lookup = function(blobIdOrTag, shouldResolve) {
     return (resolved && this.blobs[resolved]) || null;
 };
 
-Mc.Repository.prototype.store = function(blob, mergerName, directParent, additionalParent) {
-    var blobId = Mc.Util.random_uuid();
+Mc.Repository.prototype.store = function(blob, objectType, directParent, additionalParent) {
+    var json = JSON.stringify(blob);
+    var blobId = SHA1.hex_sha1(SHA1.encode_utf8(json));
     if (Mc._debugMode) { newBodyId = "blob-" + blobId; }
-    Mc.make_versionable(blob, blobId, mergerName, directParent, additionalParent);
-    this.blobs[blobId] = blob;
-    return blobId;
+    var entry = {
+	id: blobId,
+	objectType: objectType,
+	directParent: directParent,
+	additionalParent: additionalParent,
+	blob: json
+    };
+    this.blobs[blobId] = entry;
+    return entry;
 };
 
 Mc.Repository.prototype.lookupParents = function (blobId) {
@@ -301,41 +329,41 @@ Mc.Repository.prototype.merge = function(b1, b2) {
     var ancestorBlobId = Graph.least_common_ancestor(lookupParents, b1, b2);
     var ancestorBlob = this.lookup(ancestorBlobId, false);
 
-    var mergerName = blob1.mc_version_data.mergerName;
-    if ((mergerName != blob2.mc_version_data.mergerName) ||
-	(mergerName != ancestorBlob.mc_version_data.mergerName))
+    var objectType = blob1.mc_version_data.objectType;
+    if ((objectType != blob2.mc_version_data.objectType) ||
+	(objectType != ancestorBlob.mc_version_data.objectType))
     {
-	throw {message: "Merger name mismatch",
-	       mergerNames: [{key: b1, name: mergerName},
-			     {key: ancestorBlobId, name: ancestorBlob.mc_version_data.mergerName},
-			     {key: b2, name: blob2.mc_version_data.mergerName}]};
+	throw {message: "Object type mismatch",
+	       objectTypes: [{key: b1, name: objectType},
+			     {key: ancestorBlobId, name: ancestorBlob.mc_version_data.objectType},
+			     {key: b2, name: blob2.mc_version_data.objectType}]};
     }
 
     if (b2 == ancestorBlobId) {
-	return {mergerName: mergerName, ok: blob1, mergeBlobId: b1};
+	return {objectType: objectType, ok: blob1, mergeBlobId: b1};
     }
     if (b1 == ancestorBlobId) {
-	return {mergerName: mergerName, ok: blob2, mergeBlobId: b2};
+	return {objectType: objectType, ok: blob2, mergeBlobId: b2};
     }
 
-    var merger = Mc.Mergers.Directory[mergerName];
+    var merger = Mc.TypeDirectory[objectType];
     if (!merger) {
-	throw {message: "Invalid Merger name",
-	       mergerName: mergerName};
+	throw {message: "Invalid object type",
+	       objectType: objectType};
     }
 
     var result = merger(blob1, ancestorBlob, blob2);
     if ("ok" in result) {
 	result.mergeBlobId = this.store(result.ok,
-					result.mergerName,
+					result.objectType,
 					b1,
-					b2);
+					b2).id;
     }
     return result;
 };
 
 Mc.Checkout.prototype.setDirty = function(uuid) {
-    this.dirty[uuid] = uuid;
+    this.dirty[uuid] = true;
     this.anyDirty = true;
 };
 
@@ -404,7 +432,7 @@ Mc.Checkout.prototype.forEachFile = function(f) {
 };
 
 Mc.Checkout.prototype.clone = function() {
-    var result = new Mc.Checkout(this.repo, this.originalIndexBlobId);
+    var result = new Mc.Checkout(this.repo(), this.originalIndexBlobId);
     result.dirty = Mc.Util.deepCopy(this.dirty);
     result.anyDirty = this.anyDirty;
     result.index = this.index.clone();
@@ -417,6 +445,8 @@ Mc.Checkout.prototype.commit = function(checkout) {
     }
 
     // HERE
+    throw "unimplemented";
+
     var newChanged = [];
     var newAlive = {};
     for (var inodeId in fs.inodes) {
