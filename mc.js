@@ -22,243 +22,350 @@
 // SOFTWARE.
 
 var Mc = {
-    _debugMode: false,
+    _debugMode: false
+};
 
-    Util: {
-        random_hex_string: function(n) {
-            var digits = "0123456789abcdef";
-            var result = "";
-            for (var i = 0; i < n; i++) {
-                result = result + digits[Math.floor(Math.random() * 16)];
-            }
-            return result;
-        },
+Mc.Util = (function()
+{
+    function random_hex_string(n) {
+        var digits = "0123456789abcdef";
+        var result = "";
+        for (var i = 0; i < n; i++) {
+            result = result + digits[Math.floor(Math.random() * 16)];
+        }
+        return result;
+    }
 
-        random_uuid: function() {
-            if (Mc._debugMode) {
-                return Mc.Util.random_hex_string(8);
-            } else {
-                return [Mc.Util.random_hex_string(8),
-                        Mc.Util.random_hex_string(4),
-                        "4" + Mc.Util.random_hex_string(3),
-                        ((Math.floor(Math.random() * 256) & ~64) | 128).toString(16) +
-                        Mc.Util.random_hex_string(2),
-                        Mc.Util.random_hex_string(12)].join("-");
-            }
-        },
+    function random_uuid() {
+        if (Mc._debugMode) {
+            return random_hex_string(8);
+        } else {
+            return [random_hex_string(8),
+                    random_hex_string(4),
+                    "4" + random_hex_string(3),
+                    ((Math.floor(Math.random() * 256) & ~64) | 128).toString(16) +
+                    random_hex_string(2),
+                    random_hex_string(12)].join("-");
+        }
+    }
 
-        dict_union: function(s1, s2) {
-            var result = {};
-            var k;
-            for (k in s2) { result[k] = s2[k]; }
-            for (k in s1) { result[k] = s1[k]; }
-            return result;
-        },
+    function dict_union(s1, s2) {
+        var result = {};
+        var k;
+        for (k in s2) { result[k] = s2[k]; }
+        for (k in s1) { result[k] = s1[k]; }
+        return result;
+    }
 
-        dict_difference: function(s1, s2) {
-            var result = {};
-            var k;
-            for (k in s1) { result[k] = s1[k]; }
-            for (k in s2) { delete result[k]; }
-            return result;
-        },
+    function dict_difference(s1, s2) {
+        var result = {};
+        var k;
+        for (k in s1) { result[k] = s1[k]; }
+        for (k in s2) { delete result[k]; }
+        return result;
+    }
 
-        dict_to_set: function(d) {
-	    var result = {};
-            for (var k in d) { result[k] = 1; }
-            return result;
-        },
+    function dict_to_set(d) {
+	var result = {};
+        for (var k in d) { result[k] = 1; }
+        return result;
+    }
 
-        deepCopy: function(obj) {
-            // Courtesy of
-            // http://keithdevens.com/weblog/archive/2007/Jun/07/javascript.clone
-            //
-            // Does not handle recursive structures.
+    function dict_isempty(d) {
+	for (var k in d) { return false; }
+	return true;
+    }
 
-            if (obj === null || typeof(obj) != 'object') {
-                return obj;
-            }
+    function deepCopy(obj) {
+        // Courtesy of
+        // http://keithdevens.com/weblog/archive/2007/Jun/07/javascript.clone
+        //
+        // Does not handle recursive structures.
 
-            var temp = obj.constructor();
-            for (var key in obj) {
-                temp[key] = Mc.Util.deepCopy(obj[key]);
-            }
-            return temp;
+        if (obj === null || typeof(obj) != 'object') {
+            return obj;
+        }
+
+        var temp = obj.constructor();
+        for (var key in obj) {
+            temp[key] = deepCopy(obj[key]);
+        }
+        return temp;
+    }
+
+    function subclassResponsibility(methodName) {
+	throw {message: "Subclass responsibility",
+	       methodName: methodName};
+    }
+
+    function blobIdType(blobId) {
+	if (!blobId) {
+	    return blobId;
+	}
+	var colonPos = blobId.indexOf(":");
+	return (colonPos != -1) && blobId.substring(0, colonPos);
+    }
+
+    function blobIdKey(blobId) {
+	if (!blobId) {
+	    return blobId;
+	}
+	var colonPos = blobId.indexOf(":");
+	return (colonPos != -1) && blobId.substring(colonPos + 1);
+    }
+
+    return {
+	random_uuid: random_uuid,
+	dict_union: dict_union,
+	dict_difference: dict_difference,
+	dict_to_set: dict_to_set,
+	dict_isempty: dict_isempty,
+	deepCopy: deepCopy,
+	subclassResponsibility: subclassResponsibility,
+	blobIdType: blobIdType,
+	blobIdKey: blobIdKey
+    };
+})();
+
+/*
+
+A repository is a collection of hash-keyed blobs. When a blob is
+retrieved from the repository, it is revivified, and when it is
+inserted, it is pickled.
+
+Objects stored in a repository need to have a class, called an
+"objectType" below. Object types know how to:
+
+ - pickle :: instance -> jsonobject
+ - unpickle :: repository * blobid * jsonobject -> instance
+ - diff :: v0:instance * v1:instance -> diff
+ - patch :: instance * diff -> instance
+ - merge :: v1:instance * v0:instance * v2:instance -> mergeresult
+
+In the Mc.ObjectTypes table below, if a (pseudo-)method is absent, a
+default implementation will be used.
+
+Diffs:
+
+ - if no changes were made, null is returned (so null means empty diff)
+
+Merge results:
+
+ - a totally clean merge results in the data structure itself in "ok":
+   { objectType: "scalar"|"text"|"object", ok: Scalar-or-list-or-dict }
+
+ - a merge with conflicts results in:
+   { objectType: "scalar", conflict: {a: Scalar, o: Scalar, b: Scalar} }
+   { objectType: "text", result: [{ok:}, {conflict:}, ...] }
+   { objectType: "object", partial: dict, conflicts: {key: MergeResult} }
+   etc.
+
+(Note that dicts here are the only things that can have nested merge
+results.)
+
+An index is a commit-record that also maps "filename"s to inodeIds,
+and inodeIds to blobIds.
+
+A checkout is a non-version-controlled object that holds an index and
+also provides read/write/merge/commit services and a cache of
+unpickled objects.
+
+*/
+
+Mc.ObjectTypes = {
+    Default: {
+	pickle: function (instance) { return instance; },
+	unpickle: function (repo, blobId, jsonobject) { return jsonobject; },
+	diff: function (v0, v1) { Mc.Util.subclassResponsibility("diff"); },
+	patch: function (v0, p) { Mc.Util.subclassResponsibility("patch"); },
+	merge: function (v1, v0, v2) { Mc.Util.subclassResponsibility("merge"); }
+    },
+
+    simpleScalar: {
+	diff: function (v0, v1) {
+	    if (v0 == v1) return null;
+	    return {replacement: v1};
+	},
+	patch: function (v0, p) {
+	    if (p == null) return v0;
+	    return p.replacement;
+	},
+	merge: function(v1, v0, v2) {
+	    if (v1 == v2) return {objectType: "scalar", ok: v1};
+	    if (v1 == v0) return {objectType: "scalar", ok: v2};
+	    if (v2 == v0) return {objectType: "scalar", ok: v1};
+	    return {objectType: "scalar", conflict: {a: v1, o: v0, b: v2}};
         }
     },
 
-    ObjectTypes: {
-	simpleScalar: {
-	    merge: function(v1, v0, v2) {
-		if (v1 == v2) return {objectType: "scalar", ok: v1};
-		if (v1 == v0) return {objectType: "scalar", ok: v2};
-		if (v2 == v0) return {objectType: "scalar", ok: v1};
-		return {objectType: "scalar", conflict: {a: v1, o: v0, b: v2}};
-            }
+    simpleText: {
+	diff: function (v0, v1) {
+	    var p = Diff.strip_patch(Diff.diff_patch(v0, v1));
+	    return (p.length == 0) ? null : p;
 	},
-
-        simpleText: {
-	    merge: function(v1, v0, v2) {
-		var mergeResult = Diff.diff3_merge(v1, v0, v2, true);
-		if (mergeResult.length == 1 && ("ok" in mergeResult[0])) {
-		    return {objectType: "text", ok: mergeResult[0].ok};
-		} else {
-		    return {objectType: "text", result: mergeResult};
-		}
-            }
+	patch: function (v0, p) {
+	    if (p == null) return v0;
+	    return Diff.patch(v0, p);
 	},
+	merge: function(v1, v0, v2) {
+	    var mergeResult = Diff.diff3_merge(v1, v0, v2, true);
+	    if (mergeResult.length == 1 && ("ok" in mergeResult[0])) {
+		return {objectType: "text", ok: mergeResult[0].ok};
+	    } else {
+		return {objectType: "text", result: mergeResult};
+	    }
+        }
+    },
 
-	simpleObject: {
-	    merge: function(v1, v0, v2, mergerTable) {
-		var props = Mc.Util.dict_union(v1, v2);
-		var bResult = {};
-		var failures = {};
-		var haveConflicts = false;
-		if (!mergerTable) {
-		    mergerTable = Mc.SimpleObjectMergerTable;
-		}
-		for (var prop in props) {
-		    var merger = mergerTable[prop] || Mc.ObjectTypes.simpleScalar.merge;
-		    var mergedPropValue = merger(v1[prop], v0[prop], v2[prop]);
-		    if (("ok" in mergedPropValue) && (typeof(mergedPropValue.ok) != "undefined")) {
-			bResult[prop] = mergedPropValue.ok;
-		    } else {
-			failures[prop] = mergedPropValue;
-			haveConflicts = true;
-		    }
-		}
-
-		if (haveConflicts) {
-		    return {objectType: "object", partial: bResult, conflicts: failures};
-		} else {
-		    return {objectType: "object", ok: bResult};
+    simpleObject: {
+	diff: function (v0, v1, typeTableFun) {
+	    var removed = Mc.Util.dict_difference(v0, v1);
+	    var added = Mc.Util.dict_difference(v1, v0);
+	    var changed = {};
+	    if (!typeTableFun) {
+		typeTableFun = Mc.SimpleObjectTypeTableFun;
+	    }
+	    var common = Mc.Util.dict_difference(v1, added);
+	    for (var prop in common) {
+		var differ = (typeTableFun(prop) || Mc.ObjectTypes.simpleScalar).diff;
+		var p = differ(v0[prop], v1[prop]);
+		if (p != null) {
+		    changed[prop] = p;
 		}
 	    }
+	    var result = {};
+	    if (!Mc.Util.dict_isempty(removed)) result.removed = Mc.Util.dict_to_set(removed);
+	    if (!Mc.Util.dict_isempty(added)) result.added = added;
+	    if (!Mc.Util.dict_isempty(changed)) result.changed = changed;
+	    if (Mc.Util.dict_isempty(result)) return null;
+	    return result;
 	},
-
-	basicIndex: {
-	    construct: function (repo) { return new Index(repo); },
-	    unpickle: function (constructed, blob, repo) {
-		constructed.loadFrom(blob);
-	    },
-	    merge: function(v1, ignored_v0, v2) {
-		// We don't need to examine v0 at all here.
-		var result = new Mc.Index(v1.repo());
-		var conflicts = {};
-		var haveConflicts = false;
-
-		result.dead = Mc.Util.dict_union(v1.dead, v2.dead);
-
-		var aliveKeys = Mc.Util.dict_union(v1.alive, v2.alive);
-		for (var aliveKey in aliveKeys) {
-		    if (!result.dead[aliveKey]) {
-			var v1a = v1.alive[aliveKey];
-			var v2a = v2.alive[aliveKey];
-			if (v1a == v2a) {
-			    result.alive[aliveKey] = v1a;
-			} else {
-			    var mergeResult = result.repo().merge(v1a, v2a);
-			    if ("ok" in mergeResult) {
-				result.alive[aliveKey] = mergeResult.mergeBlobId;
-			    } else {
-				haveConflicts = true;
-				conflicts[aliveKey] = {a: v1a, b: v2a, details: mergeResult};
-			    }
-			}
-		    }
+	patch: function (v0, p, typeTableFun) {
+	    var result = Mc.Util.deepCopy(v0);
+	    var k;
+	    if (!typeTableFun) {
+		typeTableFun = Mc.SimpleObjectTypeTableFun;
+	    }
+	    if (p.removed) { for (k in p.removed) { delete result[k]; } }
+	    if (p.added) { for (k in p.added) { result[k] = p.added[k]; } }
+	    if (p.changed) {
+		for (k in p.changed) {
+		    var patcher = (typeTableFun(k) || Mc.ObjectTypes.simpleScalar).patch;
+		    result[k] = patcher(result[k], p.changed[k]);
 		}
-
-		if (haveConflicts) {
-		    return {objectType: "index", partial: result, conflicts: conflicts};
+	    }
+	    return result;
+	},
+	merge: function(v1, v0, v2, typeTableFun) {
+	    var props = Mc.Util.dict_union(v1, v2);
+	    var bResult = {};
+	    var failures = {};
+	    var haveConflicts = false;
+	    if (!typeTableFun) {
+		typeTableFun = Mc.SimpleObjectTypeTableFun;
+	    }
+	    for (var prop in props) {
+		var merger = (typeTableFun(prop) || Mc.ObjectTypes.simpleScalar).merge;
+		var mergedPropValue = merger(v1[prop], v0[prop], v2[prop]);
+		if ("ok" in mergedPropValue) {
+		    bResult[prop] = mergedPropValue.ok;
 		} else {
-		    return {objectType: "index", ok: result};
+		    failures[prop] = mergedPropValue;
+		    haveConflicts = true;
 		}
+	    }
+
+	    if (haveConflicts) {
+		return {objectType: "object", partial: bResult, conflicts: failures};
+	    } else {
+		return {objectType: "object", ok: bResult};
 	    }
 	}
     },
 
-    TypeDirectory: {},
-    SimpleObjectMergerTable: {},
-
-    Index: function(repo) {
-	this.alive = {};
-	this.dead = {};
-	this.repo = function () { return repo; };
-    },
-
-    Repository: function() {
-	this.repo_id = Mc.Util.random_uuid();
-	this.blobs = {}; // blobid -> blobrecord
-	this.tags = {}; // repoid/bookmarkname -> blobid
-	this.remotes = {}; // remotename -> remote_repo_id
-
-	var index = new Mc.Index(this);
-	this.tags[this.repo_id + "/master"] = this.store(index, "index").id;
-    },
-
-    Checkout: function(repo, blobIdOrTag) {
-	this.repo = function () { return repo; }
-	this.dirty = {};
-	this.anyDirty = false;
-	this.originalIndexBlobId = repo.resolve(blobIdOrTag);
-	this.index = repo.lookup(this.originalIndexBlobId, false);
-	if (this.index.objectType != "index") {
-	    throw {message: "Cannot checkout blob that is not of index type",
-		   blobIdOrTag: blobIdOrTag};
+    basicIndex: {
+	diff: function (v0, v1) {
+	    var result = {};
+	    var d;
+	    d = Mc.ObjectTypes.simpleObject.diff(v0.inodes, v1.inodes, Mc.RawObjectTypeTableFun);
+	    if (d) { result.inodes = d; }
+	    d = Mc.ObjectTypes.simpleObject.diff(v0.names, v1.names, Mc.RawObjectTypeTableFun);
+	    if (d) { result.names = d; }
+	    result.metadata = v1.metadata;
+	    result.directParent = v1.directParent;
+	    result.additionalParent = v1.additionalParent;
+	    return result;
+	},
+	patch: function (v0, p) {
+	    var result = Mc.Util.deepCopy(v0);
+	    result.inodes = Mc.ObjectTypes.simpleObject.patch(result.inodes, p.inodes || null);
+	    result.names = Mc.ObjectTypes.simpleObject.patch(result.names, p.names || null);
+	    result.metadata = p.metadata;
+	    result.directParent = p.directParent;
+	    result.additionalParent = p.additionalParent;
+	    return result;
+	},
+	merge: function(v1, v0, v2) {
+	    // We cannot merge indexes directly, because they map
+	    // inode IDs to blob IDs, and merging would need to insert
+	    // new blob IDs. Instead, we construct a merged index
+	    // explicitly, outside of the normal merging code.
+	    throw {message: "Cannot merge indexes",
+		   v1: v1,
+		   v0: v0,
+		   v2: v2};
 	}
-    },
-};
-
-Mc.TypeDirectory["scalar"] = Mc.ObjectTypes.simpleScalar;
-Mc.TypeDirectory["text"] = Mc.ObjectTypes.simpleText;
-Mc.TypeDirectory["object"] = Mc.ObjectTypes.simpleObject;
-Mc.TypeDirectory["index"] = Mc.ObjectTypes.basicIndex;
-
-Mc.SimpleObjectMergerTable["text"] = Mc.ObjectTypes.simpleText.merge;
-
-/*
-Mc.Index.prototype.loadFrom = function(blob) {
-    this.alive = Mc.Util.deepCopy(blob.alive);
-    this.dead = Mc.Util.deepCopy(blob.dead);
-}
-
-Mc.Index.prototype.insert = function(value) {
-    var key = Mc.Util.random_uuid();
-    if (Mc._debugMode) { key = "indexkey-" + key; }
-    this.alive[key] = value;
-    return key;
-};
-
-Mc.Index.prototype.update = function(key, value) {
-    if (!this.alive[key]) return false;
-    this.alive[key] = value;
-    return true;
-};
-
-Mc.Index.prototype.remove = function(key) {
-    if (!this.alive[key]) return false;
-    delete this.alive[key];
-    this.dead[key] = 1;
-    return true;
-};
-
-Mc.Index.prototype.exists = function(key) {
-    return !!(this.alive[key]);
-};
-
-Mc.Index.prototype.lookup = function(key) {
-    return this.repo().lookup(this.alive[key]);
-};
-
-Mc.Index.prototype.forEachBlob = function(f) {
-    for (var key in this.alive) {
-	f(key, this.lookup(key));
     }
 };
-*/
+
+Mc.ObjectTypes.inodeTable = Mc.Util.deepCopy(Mc.ObjectTypes.simpleObject);
+Mc.ObjectTypes.inodeTable.merge = function(v1, v0, v2) {
+};
+
+Mc.TypeDirectory = {
+    "scalar": Mc.ObjectTypes.simpleScalar,
+    "text": Mc.ObjectTypes.simpleText,
+    "object": Mc.ObjectTypes.simpleObject,
+    "index": Mc.ObjectTypes.basicIndex,
+};
+
+Mc.lookupType = function(typeName) {
+    var t = Mc.TypeDirectory[typeName];
+    if (!t) {
+	throw {message: "ObjectType not found",
+	       typeName: typeName};
+    }
+    return t;
+};
+
+Mc.SimpleObjectTypeTable = {
+    "text": Mc.ObjectTypes.simpleText
+};
+
+Mc.typeTableFun = function (table) {
+    return function (key) {
+	return table[key];
+    };
+};
+
+Mc.SimpleObjectTypeTableFun = Mc.typeTableFun(Mc.SimpleObjectTypeTable);
+
+Mc.RawObjectTypeTableFun = Mc.typeTableFun({});
+
+Mc.Repository = function() {
+    this.repo_id = Mc.Util.random_uuid();
+    this.blobs = {}; // blobId -> pickledInstance
+    this.tags = {}; // repoid/bookmarkname -> blobId
+    this.remotes = {}; // remotename -> remote_repo_id
+    this.accidentalCleanMerge = true; // set to false to disable
+
+    var checkout = new Mc.Checkout(this, null);
+    checkout.anyDirty = true; // cheeky
+    checkout.commit();
+};
 
 Mc.Repository.prototype.resolve = function(blobIdOrTag) {
-    if (blobIdOrTag in this.blobs) {
+    if (Mc.Util.blobIdKey(blobIdOrTag) in this.blobs) {
 	return blobIdOrTag;
     } else {
 	if (!blobIdOrTag) {
@@ -279,209 +386,374 @@ Mc.Repository.prototype.resolve = function(blobIdOrTag) {
     }
 };
 
-Mc.Repository.prototype.lookup = function(blobIdOrTag, shouldResolve) {
+Mc.Repository.prototype.maybeResolve = function(blobIdOrTag, shouldResolve) {
     // shouldResolve is an optional parameter defaulting to true,
     // hence the odd test in the line below
     var resolved = (shouldResolve !== false) ? this.resolve(blobIdOrTag) : blobIdOrTag;
-    return (resolved && this.blobs[resolved]) || null;
+    if (!resolved) return null;
+    return resolved;
 };
 
-Mc.Repository.prototype.store = function(blob, objectType, directParent, additionalParent) {
-    var json = JSON.stringify(blob);
+Mc.Repository.prototype.lookupBlob = function(resolved) {
+    var blob = this.blobs[Mc.Util.blobIdKey(resolved)];
+    if (!blob) {
+	throw {message: "Object not found", blobId: resolved};
+    }
+    return JSON.parse(blob);
+};
+
+Mc.Repository.prototype.store = function(instance, // a picklable object
+					 objectType) // a key into Mc.TypeDirectory
+{
+    // TODO: diff for compactness. Will need directParent argument here.
+
+    var t = Mc.lookupType(objectType);
+    var json = JSON.stringify((t.pickle || Mc.ObjectTypes.Default.pickle)(instance));
     var blobId = SHA1.hex_sha1(SHA1.encode_utf8(json));
-    if (Mc._debugMode) { newBodyId = "blob-" + blobId; }
-    var entry = {
-	id: blobId,
-	objectType: objectType,
-	directParent: directParent,
-	additionalParent: additionalParent,
-	blob: json
-    };
-    this.blobs[blobId] = entry;
-    return entry;
+    if (Mc._debugMode) { blobId = "blob-" + blobId.substring(0, 8); }
+    this.blobs[blobId] = json;
+    return objectType + ":" + blobId;
+};
+
+Mc.Repository.prototype.lookup = function (blobId, shouldResolve) {
+    var resolved = this.maybeResolve(blobId, shouldResolve);
+    var k = Mc.Util.blobIdKey(resolved);
+    if (k in this.blobs) {
+	var t = Mc.lookupType(Mc.Util.blobIdType(resolved));
+	return (t.unpickle || Mc.ObjectTypes.Default.unpickle)(this,
+							       resolved,
+							       JSON.parse(this.blobs[k]));
+    } else {
+	return null;
+    }
 };
 
 Mc.Repository.prototype.lookupParents = function (blobId) {
     var b = this.lookup(blobId);
     var result = [];
-    if (b.mc_version_data) {
-	b = b.mc_version_data;
-	if (b.directParent) result.push(b.directParent);
-	if (b.additionalParent) result.push(b.additionalParent);
-    }
+    if (b.directParent) result.push(b.directParent);
+    if (b.additionalParent) result.push(b.additionalParent);
     return result;
 };
 
-Mc.Repository.prototype.canMerge = function(b1, b2) {
+Mc.Repository.prototype.leastCommonAncestor = function(b1, b2) {
     var $elf = this;
     function lookupParents(blobId) { return $elf.lookupParents(blobId); }
-    var ancestorBlobId = Graph.least_common_ancestor(lookupParents, b1, b2);
+    return Graph.least_common_ancestor(lookupParents, b1, b2);
+};
+
+Mc.Repository.prototype.canMerge = function(b1, b2) {
+    var ancestorBlobId = this.leastCommonAncestor(b1, b2);
     return !(b1 == ancestorBlobId || b2 == ancestorBlobId);
 };
 
-Mc.Repository.prototype.merge = function(b1, b2) {
-    var blob1 = this.lookup(b1);
-    var blob2 = this.lookup(b2);
+Mc.Repository.prototype.merge = function(b1, b2, metadata) {
+    var ancestorBlobId = this.leastCommonAncestor(b1, b2);
+    return this.merge3(b1, ancestorBlobId, b2, metadata);
+}
 
-    var $elf = this;
-    function lookupParents(blobId) { return $elf.lookupParents(blobId); }
+Mc.Repository.prototype.merge3 = function (b1, b0, b2, metadata) {
+    b1 = this.resolve(b1);
+    b2 = this.resolve(b2);
 
-    var ancestorBlobId = Graph.least_common_ancestor(lookupParents, b1, b2);
-    var ancestorBlob = this.lookup(ancestorBlobId, false);
-
-    var objectType = blob1.mc_version_data.objectType;
-    if ((objectType != blob2.mc_version_data.objectType) ||
-	(objectType != ancestorBlob.mc_version_data.objectType))
+    var objectType = Mc.Util.blobIdType(b1);
+    if ((objectType != Mc.Util.blobIdType(b2)) || (objectType != Mc.Util.blobIdType(b0)))
     {
 	throw {message: "Object type mismatch",
-	       objectTypes: [{key: b1, name: objectType},
-			     {key: ancestorBlobId, name: ancestorBlob.mc_version_data.objectType},
-			     {key: b2, name: blob2.mc_version_data.objectType}]};
+	       blobIds: [b1, b0, b2]};
     }
 
-    if (b2 == ancestorBlobId) {
-	return {objectType: objectType, ok: blob1, mergeBlobId: b1};
-    }
-    if (b1 == ancestorBlobId) {
-	return {objectType: objectType, ok: blob2, mergeBlobId: b2};
-    }
-
-    var merger = Mc.TypeDirectory[objectType];
-    if (!merger) {
+    var t = Mc.lookupType(objectType);
+    if (!t) {
 	throw {message: "Invalid object type",
 	       objectType: objectType};
     }
 
-    var result = merger(blob1, ancestorBlob, blob2);
-    if ("ok" in result) {
-	result.mergeBlobId = this.store(result.ok,
-					result.objectType,
-					b1,
-					b2).id;
+    var blob1 = this.lookupBlob(b1);
+    var blob2 = this.lookupBlob(b2);
+    var blob0 = this.lookupBlob(b0); // note: not resolved further!
+
+    var unpickler = (t.unpickle || Mc.ObjectTypes.Default.unpickle);
+
+    if (this.accidentalCleanMerge && (b1 == b2)) {
+	return {objectType: objectType, ok: unpickler(this, b1, blob1), mergeBlobId: b1};
     }
+
+    if (b2 == b0) {
+	return {objectType: objectType, ok: unpickler(this, b1, blob1), mergeBlobId: b1};
+    }
+    if (b1 == b0) {
+	return {objectType: objectType, ok: unpickler(this, b2, blob2), mergeBlobId: b2};
+    }
+
+    var result = (t.merge || Mc.ObjectTypes.Default.merge)(unpickler(this, b1, blob1),
+							   unpickler(this, b0, blob0),
+							   unpickler(this, b2, blob2));
     return result;
 };
 
-Mc.Checkout.prototype.setDirty = function(uuid) {
-    this.dirty[uuid] = true;
+Mc.Repository.prototype.tag = function(blobId, tagName) {
+    this.tags[this.repo_id + "/" + tagName] = blobId;
+};
+
+Mc.Checkout = function(repo, blobIdOrTag) {
+    this.repo = repo;
+    this.branchName = "master";
+
+    var resolved = repo.resolve(blobIdOrTag);
+    var index = repo.lookup(resolved, false);
+    if (index) {
+	this.inodes = index.inodes; // inodeId -> blobId
+	this.names = index.names; // name -> inodeId
+	this.directParent = resolved;
+    } else {
+	this.inodes = {};
+	this.names = {};
+	this.directParent = undefined;
+    }
+
+    this.emptyCache();
+    this.resetTemporaryState();
+};
+
+Mc.Checkout.prototype.emptyCache = function() {
+    this.cache = {}; // blobId -> instance
+}
+
+Mc.Checkout.prototype.resetTemporaryState = function() {
+    this.newInstances = []; // list of {instance:, objectType:}
+    this.dirtyInodes = {}; // inodeId -> ({instanceIndex:instanceIndex} | {blobId:blobId})
+    this.conflicts = null;
+    this.anyDirty = false;
+    this.additionalParent = undefined;
+};
+
+Mc.Checkout.prototype.ensureClean = function(what) {
+    if (this.anyDirty) {
+	throw {message: ("Cannot "+what+" dirty checkout")};
+    }
+};
+
+Mc.Checkout.prototype.setBranch = function(branchName) {
+    this.branchName = branchName;
+};
+
+Mc.Checkout.prototype.lookupFile = function(fileName, createIfAbsent) {
+    if (fileName in this.names) {
+	return this.names[fileName];
+    } else {
+	createIfAbsent = createIfAbsent || false;
+	if (createIfAbsent) {
+	    var newInodeId = Mc.Util.random_uuid();
+	    if (Mc._debugMode) { newInodeId = "inode-" + newInodeId; }
+	    this.names[fileName] = newInodeId;
+	    this.anyDirty = true;
+	    return newInodeId;
+	} else {
+	    throw {message: "File not found", fileName: fileName};
+	}
+    }
+};
+
+Mc.Checkout.prototype.resolveInode = function(inodeId) {
+    if (inodeId in this.dirtyInodes) {
+	return this.dirtyInodes[inodeId];
+    }
+    if (inodeId in this.inodes) {
+	return {blobId: this.inodes[inodeId]};
+    }
+    throw {message: "Internal error: missing inode", inodeId: inodeId};
+};
+
+Mc.Checkout.prototype.writeFile = function(fileName, instance, objectType) {
+    objectType = objectType || "object";
+    var inodeId = this.lookupFile(fileName, true);
+    this.writeInode(inodeId, instance, objectType);
+};
+
+Mc.Checkout.prototype.writeInode = function(inodeId, instance, objectType) {
+    this.newInstances.push({instance: Mc.Util.deepCopy(instance), objectType: objectType});
+    this.dirtyInodes[inodeId] = {instanceIndex: (this.newInstances.length - 1)};
     this.anyDirty = true;
 };
 
-Mc.Checkout.prototype.createFile = function() {
-    var uuid = this.index.insert({});
-    this.setDirty(uuid);
-    return uuid;
+Mc.Checkout.prototype.copyFile = function(sourceName, targetName) {
+    var inodeId = this.lookupFile(sourceName);
+    var instanceLocation = this.resolveInode(inodeId);
+    var newInodeId = this.lookupFile(targetName, true);
+    this.dirtyInodes[newInodeId] = instanceLocation;
+    this.anyDirty = true;
 };
 
-Mc.Checkout.prototype.deleteFile = function(uuid) {
-    var result = this.index.remove(uuid);
-    if (result) this.anyDirty = true;
-    return result;
+Mc.Checkout.prototype.renameFile = function(sourceName, targetName) {
+    var inodeId = this.lookupFile(sourceName);
+    this.names[targetName] = inodeId;
+    delete this.names[sourceName];
+    this.anyDirty = true;
 };
 
-Mc.Checkout.prototype.fileExists = function(uuid) {
-    return this.index.exists(uuid);
+Mc.Checkout.prototype.getInstance = function(blobId) {
+    if (!(blobId in this.cache)) {
+	var instance = this.repo.lookup(blobId, false);
+	if (!instance) {
+	    throw {message: "Missing blob", blobId: blobId};
+	}
+	this.cache[blobId] = instance;
+    }
+    return this.cache[blobId];
 };
 
-Mc.Checkout.prototype.hasProp = function(uuid, prop) {
-    var inode = this.index.lookup(uuid);
-    if (!inode) return null;
-    return (inode[prop] !== undefined);
-};
-
-Mc.Checkout.prototype.getProp = function(uuid, prop, defaultValue) {
-    var inode = this.index.lookup(uuid);
-    if (!inode) return null;
-    var v = inode[prop];
-    if (v === undefined) {
-	return defaultValue;
+Mc.Checkout.prototype.readFile = function(fileName) {
+    var inodeId = this.lookupFile(fileName);
+    var instanceLocation = this.resolveInode(inodeId);
+    var result;
+    if (instanceLocation.blobId) {
+	result = {instance: this.getInstance(instanceLocation.blobId),
+		  objectType: Mc.Util.blobIdType(instanceLocation.blobId)};
     } else {
-	return Mc.Util.deepCopy(v);
+	result = this.newInstances[instanceLocation.instanceIndex];
+    }
+    return Mc.Util.deepCopy(result);
+};
+
+Mc.Checkout.prototype.deleteFile = function(fileName) {
+    if (fileName in this.names) {
+	delete this.names[fileName];
+	this.anyDirty = true;
+	return true;
+    } else {
+	return false;
     }
 };
 
-Mc.Checkout.prototype.setProp = function(uuid, prop, value) {
-    var inode = this.index.lookup(uuid);
-    if (!inode) return false;
-    inode[prop] = value;
-    this.setDirty(uuid);
-    return true;
-};
-
-Mc.Checkout.prototype.clearProp = function(uuid, prop) {
-    var inode = this.index.lookup(uuid);
-    if (!inode) return null;
-    if (inode[prop] !== undefined) {
-	delete inode[prop];
-	this.setDirty(uuid);
-    }
-    return true;
-};
-
-Mc.Checkout.prototype.forEachProp = function(uuid, f) {
-    var inode = this.index.lookup(uuid);
-    if (!inode) return null;
-    for (var prop in inode) {
-	f(prop, inode[prop]);
-    }
-    return true;
+Mc.Checkout.prototype.fileExists = function(fileName) {
+    return (fileName in this.names);
 };
 
 Mc.Checkout.prototype.forEachFile = function(f) {
-    this.index.forEachBlob(f);
+    for (var name in this.names) {
+	f(name);
+    }
 };
 
-Mc.Checkout.prototype.clone = function() {
-    var result = new Mc.Checkout(this.repo(), this.originalIndexBlobId);
-    result.dirty = Mc.Util.deepCopy(this.dirty);
-    result.anyDirty = this.anyDirty;
-    result.index = this.index.clone();
-    return result;
+Mc.Checkout.prototype.isDirty = function() {
+    return this.anyDirty;
 };
 
-Mc.Checkout.prototype.commit = function(checkout) {
-    if (!checkout.anyDirty) {
-	return null;
+Mc.Checkout.prototype.merge = function(otherBlobIdOrTag) {
+    this.ensureClean("merge into");
+
+    var $elf = this;
+    var repo = this.repo;
+
+    var b1 = this.directParent;
+    var b2 = repo.resolve(otherBlobIdOrTag);
+    var b0 = repo.leastCommonAncestor(b1, b2);
+
+    var v1 = repo.lookup(b1, false);
+    var v2 = repo.lookup(b2, false);
+    var v0 = b0 ? repo.lookup(b0, false) : {inodes: {}, names: {}};
+
+    var conflicts = {};
+    var haveConflicts = false;
+
+    var mergeResult;
+
+    function inodeTableMerger(v1, v0, v2) {
+	var mr = repo.merge3(v1, v0, v2);
+	if ("ok" in mr) {
+	    if (mr.mergeBlobId) {
+		return {objectType: "inodeTable", ok: {blobId: mr.mergeBlobId}};
+	    } else {
+		return {objectType: "inodeTable", ok: {instance: mr.ok,
+						       objectType: mr.objectType}};
+	    }
+	} else {
+	    return mr;
+	}
     }
 
-    // HERE
-    throw "unimplemented";
-
-    var newChanged = [];
-    var newAlive = {};
-    for (var inodeId in fs.inodes) {
-        if (fs.dirty[inodeId]) {
-            var newBodyId = Dvcs.Util.random_uuid();
-            if (Dvcs._debugMode) { newBodyId = "body-" + newBodyId; }
-            this.bodies[newBodyId] = Dvcs.Util.deepCopy(fs.inodes[inodeId]);
-            newAlive[inodeId] = newBodyId;
-            newChanged.push(inodeId);
-        } else {
-            newAlive[inodeId] = oldAlive[inodeId];
-        }
+    function updateInodes(tab) {
+	for (var inodeId in tab) {
+	    var r = tab[inodeId];
+	    if (r.blobId) {
+		$elf.inodes[inodeId] = r.blobId;
+	    } else {
+		$elf.writeInode(inodeId, r.instance, r.objectType);
+	    }
+	}
     }
 
-    var newDead = Dvcs.Util.dict_to_set(Dvcs.Util.dict_union(oldDead,
-                                                             Dvcs.Util.dict_difference(oldAlive,
-                                                                                       newAlive)));
+    mergeResult = Mc.ObjectTypes.simpleObject.merge(v1.inodes, v0.inodes, v2.inodes,
+						    function (key) {
+							return {
+							    merge: inodeTableMerger
+							};
+						    });
+    this.inodes = {};
+    if ("ok" in mergeResult) {
+	updateInodes(mergeResult.ok);
+    } else {
+	haveConflicts = true;
+	updateInodes(mergeResult.partial);
+	conflicts.inodes = mergeResult.conflicts;
+    }
 
-    var rev = { alive: newAlive,
-                dead: newDead,
-                changed: newChanged,
-                branch: fs.getBranch(),
-                timestamp: (new Date()).getTime(),
-                metadata: metadata,
-                directParent: fs.directParent,
-                additionalParent: fs.additionalParent };
+    mergeResult = Mc.ObjectTypes.simpleObject.merge(v1.names, v0.names, v2.names,
+						    function (key) { return null; });
+    if ("ok" in mergeResult) {
+	this.names = mergeResult.ok;
+    } else {
+	haveConflicts = true;
+	this.names = mergeResult.partial;
+	conflicts.names = mergeResult.conflicts;
+    }
 
-    var newRevId = Dvcs.Util.random_uuid();
-    if (Dvcs._debugMode) { newRevId = "rev-" + newRevId; }
-    this.recordRevision(newRevId, rev);
+    this.conflicts = haveConflicts ? conflicts : null;
+    this.additionalParent = b2;
+    this.anyDirty = true;
+};
 
-    fs.directParent = newRevId;
-    fs.additionalParent = null;
-    fs.dirty = {};
-    fs.anyDirty = false;
+Mc.Checkout.prototype.commit = function(metadata) {
+    if (this.conflicts != null) {
+	throw {message: "Cannot commit with outstanding conflicts"};
+    }
 
-    return newRevId;
+    if (this.anyDirty) {
+	var repo = this.repo;
+
+	for (var inodeId in this.dirtyInodes) {
+	    var instanceLocation = this.dirtyInodes[inodeId];
+	    if (instanceLocation.blobId) {
+		this.inodes[inodeId] = instanceLocation.blobId;
+	    } else {
+		var x = this.newInstances[instanceLocation.instanceIndex];
+		this.inodes[inodeId] = repo.store(x.instance, x.objectType);
+	    }
+	}
+
+	var inodesInUse = {};
+	for (var name in this.names) {
+	    inodesInUse[this.names[name]] = 1;
+	}
+
+	var inodesToRemove = Mc.Util.dict_difference(this.inodes, inodesInUse);
+	this.inodes = Mc.Util.dict_difference(this.inodes, inodesToRemove);
+
+	var commitId = repo.store({
+				      inodes: this.inodes,
+				      names: this.names,
+				      metadata: metadata,
+				      directParent: this.directParent,
+				      additionalParent: this.additionalParent
+				  }, "index");
+
+	this.resetTemporaryState();
+	this.directParent = commitId;
+
+	if (this.branchName) {
+	    repo.tag(commitId, this.branchName);
+	}
+    }
+    return this.directParent;
 };

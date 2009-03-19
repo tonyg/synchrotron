@@ -1,3 +1,5 @@
+try {
+
 function noisyLoad(filename) {
     print("Loading "+filename+"...");
     load(filename);
@@ -22,58 +24,58 @@ Mc.Tests = {
 
         function d(x) {
             print(x);
-            print(pp({repo: repo,
-                      fs: fs}));
+            print(pp({fs: fs}));
             print();
         }
 
-        var fileA = fs.createFile();
-        var fileB = fs.createFile();
         d("start");
 
-        fs.setProp(fileA, "name", "File A");
-        fs.setProp(fileA, "text", "A B C D E".split(/ /));
-        fs.setProp(fileB, "name", "File B");
-        fs.setProp(fileB, "text", ["One line"]);
-        var rA = repo.commit(fs);
+	fs.writeFile("File A", {"text": "A B C D E".split(/ /)});
+	fs.writeFile("File B", {"text": ["One line"]});
+        var rA = fs.commit({comment: "First commit"});
         d("post-rA");
+
         fs.setBranch("BBB");
-        fs.setProp(fileA, "text", "G G G A B C D E".split(/ /));
-        var rB1 = repo.commit(fs);
+
+	fs.writeFile("File A", {"text": "G G G A B C D E".split(/ /)});
+        var rB1 = fs.commit({comment: "Second commit"});
         d("post-rB1");
-        fs.setProp(fileA, "text", "A B C D E G G G A B C D E".split(/ /));
-        var rB2 = repo.commit(fs);
+
+        fs.writeFile("File A", {"text": "A B C D E G G G A B C D E".split(/ /)});
+        var rB2 = fs.commit({comment: "Third commit"});
         d("post-rB2");
 
-        fs = repo.update(rA);
+	fs = new Mc.Checkout(repo, rA);
         d("post-update-to-rA");
-        fs.setProp(fileA, "name", "File A, renamed");
-        fs.setProp(fileA, "text", "A B X D E".split(/ /));
-        var rC = repo.commit(fs);
-        Mc.Tests.revisionC = rC;
+
+	fs.renameFile("File A", "File A, renamed");
+        fs.writeFile("File A, renamed", {"text": "A B X D E".split(/ /)});
+        var rC = fs.commit({comment: "Fourth commit"});
         d("post-rC");
 
-        var mergeResult = repo.merge(rC, rB2);
-        print("--------------------");
-        print(pp(mergeResult));
-        print("--------------------");
+	fs.merge("BBB");
+	d("post-merge");
 
-        var rMerger = repo.commit(mergeResult.files);
-        fs = repo.update(rMerger);
+	var rMerger = fs.commit({comment: "Merge BBB into master"});
+	d("post-merge-commit");
+
+        fs = new Mc.Checkout(repo, rMerger);
         d("post-rMerger");
 
-        print("branch tip BBB: "+repo.branchTip("BBB"));
-        print("branch tip NonExistent: "+repo.branchTip("NonExistent"));
+        print("branch tip BBB: "+repo.resolve("BBB"));
+        print("branch tip NonExistent: "+repo.resolve("NonExistent"));
         print();
 
-        fs = repo.update("BBB");
-        fs.deleteFile(fileA);
-        var rB3 = repo.commit(fs);
+        fs = new Mc.Checkout(repo, "BBB");
+	fs.setBranch("BBB");
+        fs.deleteFile("File A");
+        var rB3 = fs.commit({comment: "Remove the renamed file A"});
         d("post-rB3");
 
-        var rMerger2 = repo.commit(repo.merge(rB3, rMerger).files);
-        fs = repo.update(rMerger2);
-        d("post-rMerger2");
+	fs.merge("master");
+	d("post-rMerger2");
+	var rMerger2 = fs.commit({comment: "Merge master into BBB"});
+        d("post-rMerger2-commit");
 
         print("---------------------------------------------------------------------------");
         Mc.Tests.exportedJson = pp(repo.exportRevisions());
@@ -87,3 +89,8 @@ Mc.Tests = {
 
 Mc._debugMode = true;
 Mc.Tests.Rt1();
+
+} catch (e) {
+    print(uneval(e));
+    quit(1);
+}
