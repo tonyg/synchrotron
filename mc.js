@@ -71,6 +71,12 @@ Mc.Util = (function()
         return result;
     }
 
+    function dict_to_set_list(d) {
+	var result = [];
+        for (var k in d) { result.push(k); }
+        return result;
+    }
+
     function dict_isempty(d) {
 	for (var k in d) { return false; }
 	return true;
@@ -119,6 +125,7 @@ Mc.Util = (function()
 	dict_union: dict_union,
 	dict_difference: dict_difference,
 	dict_to_set: dict_to_set,
+	dict_to_set_list: dict_to_set_list,
 	dict_isempty: dict_isempty,
 	deepCopy: deepCopy,
 	subclassResponsibility: subclassResponsibility,
@@ -234,7 +241,7 @@ Mc.ObjectTypes = {
 		}
 	    }
 	    var result = {};
-	    if (!Mc.Util.dict_isempty(removed)) result.removed = Mc.Util.dict_to_set(removed);
+	    if (!Mc.Util.dict_isempty(removed)) result.removed = Mc.Util.dict_to_set_list(removed);
 	    if (!Mc.Util.dict_isempty(added)) result.added = added;
 	    if (!Mc.Util.dict_isempty(changed)) result.changed = changed;
 	    if (Mc.Util.dict_isempty(result)) return null;
@@ -242,11 +249,16 @@ Mc.ObjectTypes = {
 	},
 	patch: function (v0, p, typeTableFun) {
 	    var result = Mc.Util.deepCopy(v0);
+	    if (p == null) return result;
 	    var k;
 	    if (!typeTableFun) {
 		typeTableFun = Mc.SimpleObjectTypeTableFun;
 	    }
-	    if (p.removed) { for (k in p.removed) { delete result[k]; } }
+	    if (p.removed) {
+		for (var i = 0; i < p.removed.length; i++) {
+		    delete result[p.removed[i]];
+		}
+	    }
 	    if (p.added) { for (k in p.added) { result[k] = p.added[k]; } }
 	    if (p.changed) {
 		for (k in p.changed) {
@@ -354,15 +366,21 @@ Mc.RawObjectTypeTableFun = Mc.typeTableFun({});
 
 Mc.Repository = function() {
     this.repo_id = Mc.Util.random_uuid();
-    this.blobs = {}; // blobId -> pickledInstance
+    this.blobs = {}; // blobId -> pickledInstanceRecord
     this.tags = {}; // repoid/bookmarkname -> blobId
     this.remotes = {}; // remotename -> remote_repo_id
     this.accidentalCleanMerge = true; // set to false to disable
+
+    this.cache = {}; // blobId -> unpickledInstance
 
     var checkout = new Mc.Checkout(this, null);
     checkout.anyDirty = true; // cheeky
     checkout.commit();
 };
+
+Mc.Repository.prototype.emptyCache = function() {
+    this.cache = {}; // blobId -> unpickledInstance
+}
 
 Mc.Repository.prototype.resolve = function(blobIdOrTag) {
     if (Mc.Util.blobIdKey(blobIdOrTag) in this.blobs) {
@@ -394,52 +412,73 @@ Mc.Repository.prototype.maybeResolve = function(blobIdOrTag, shouldResolve) {
     return resolved;
 };
 
-Mc.Repository.prototype.lookupBlob = function(resolved) {
-    var blob = this.blobs[Mc.Util.blobIdKey(resolved)];
-    if (!blob) {
-	throw {message: "Object not found", blobId: resolved};
-    }
-    return JSON.parse(blob);
-};
-
 Mc.Repository.prototype.store = function(instance, // a picklable object
-					 objectType) // a key into Mc.TypeDirectory
+					 objectType, // a key into Mc.TypeDirectory
+					 directParent,
+					 additionalParent)
 {
-    // TODO: diff for compactness. Will need directParent argument here.
-
     var t = Mc.lookupType(objectType);
-    var json = JSON.stringify((t.pickle || Mc.ObjectTypes.Default.pickle)(instance));
-    var blobId = SHA1.hex_sha1(SHA1.encode_utf8(json));
+    var entry = {directParent: directParent, additionalParent: additionalParent};
+
+    var jsonInstance = (t.pickle || Mc.ObjectTypes.Default.pickle)(instance);
+    var jsonText = JSON.stringify(jsonInstance);
+    var blobId = SHA1.hex_sha1(SHA1.encode_utf8(jsonText));
     if (Mc._debugMode) { blobId = "blob-" + blobId.substring(0, 8); }
-    this.blobs[blobId] = json;
+
+    if (directParent) {
+	var differ = t.diff || Mc.ObjectTypes.Default.diff;
+	var diffJson = differ(this.lookupUnsafe(directParent), instance);
+	entry.diff = JSON.stringify(diffJson);
+    } else {
+	entry.full = jsonText;
+    }
+
+    this.blobs[blobId] = entry;
     return objectType + ":" + blobId;
 };
 
 Mc.Repository.prototype.lookup = function (blobId, shouldResolve) {
+    return Mc.Util.deepCopy(this.lookupUnsafe(blobId, shouldResolve));
+};
+
+Mc.Repository.prototype.lookupUnsafe = function (blobId, shouldResolve) {
     var resolved = this.maybeResolve(blobId, shouldResolve);
-    var k = Mc.Util.blobIdKey(resolved);
-    if (k in this.blobs) {
+
+    if (!(resolved in this.cache)) {
+	var k = Mc.Util.blobIdKey(resolved);
+	if (!(k in this.blobs)) {
+	    return null;
+	}
+	var entry = this.blobs[k];
+
 	var t = Mc.lookupType(Mc.Util.blobIdType(resolved));
-	return (t.unpickle || Mc.ObjectTypes.Default.unpickle)(this,
-							       resolved,
-							       JSON.parse(this.blobs[k]));
-    } else {
-	return null;
+
+	if (entry.diff) {
+	    var patcher = (t.patch || Mc.ObjectTypes.Default.patch);
+	    this.cache[resolved] = patcher(this.lookupUnsafe(entry.directParent),
+					   JSON.parse(entry.diff));
+	} else {
+	    var unpickler = (t.unpickle || Mc.ObjectTypes.Default.unpickle);
+	    this.cache[resolved] = unpickler(this, resolved, JSON.parse(entry.full));
+	}
     }
+    return this.cache[resolved];
 };
 
 Mc.Repository.prototype.lookupParents = function (blobId) {
-    var b = this.lookup(blobId);
     var result = [];
-    if (b.directParent) result.push(b.directParent);
-    if (b.additionalParent) result.push(b.additionalParent);
+    var entry = this.blobs[Mc.Util.blobIdKey(blobId)];
+    if (entry) {
+	if (entry.directParent) result.push(entry.directParent);
+	if (entry.additionalParent) result.push(entry.additionalParent);
+    }
     return result;
 };
 
 Mc.Repository.prototype.leastCommonAncestor = function(b1, b2) {
     var $elf = this;
     function lookupParents(blobId) { return $elf.lookupParents(blobId); }
-    return Graph.least_common_ancestor(lookupParents, b1, b2);
+    return Graph.least_common_ancestor(lookupParents, this.resolve(b1), this.resolve(b2));
 };
 
 Mc.Repository.prototype.canMerge = function(b1, b2) {
@@ -469,31 +508,47 @@ Mc.Repository.prototype.merge3 = function (b1, b0, b2, metadata) {
 	       objectType: objectType};
     }
 
-    var blob1 = this.lookupBlob(b1);
-    var blob2 = this.lookupBlob(b2);
-    var blob0 = this.lookupBlob(b0); // note: not resolved further!
-
-    var unpickler = (t.unpickle || Mc.ObjectTypes.Default.unpickle);
+    var inst1 = this.lookupUnsafe(b1);
+    var inst2 = this.lookupUnsafe(b2);
+    var inst0 = this.lookupUnsafe(b0); // note: not resolved further!
 
     if (this.accidentalCleanMerge && (b1 == b2)) {
-	return {objectType: objectType, ok: unpickler(this, b1, blob1), mergeBlobId: b1};
+	return {objectType: objectType, ok: inst1, mergeBlobId: b1};
     }
 
     if (b2 == b0) {
-	return {objectType: objectType, ok: unpickler(this, b1, blob1), mergeBlobId: b1};
+	return {objectType: objectType, ok: inst1, mergeBlobId: b1};
     }
     if (b1 == b0) {
-	return {objectType: objectType, ok: unpickler(this, b2, blob2), mergeBlobId: b2};
+	return {objectType: objectType, ok: inst2, mergeBlobId: b2};
     }
 
-    var result = (t.merge || Mc.ObjectTypes.Default.merge)(unpickler(this, b1, blob1),
-							   unpickler(this, b0, blob0),
-							   unpickler(this, b2, blob2));
+    var result = (t.merge || Mc.ObjectTypes.Default.merge)(inst1, inst0, inst2);
     return result;
 };
 
 Mc.Repository.prototype.tag = function(blobId, tagName) {
     this.tags[this.repo_id + "/" + tagName] = blobId;
+};
+
+Mc.Repository.prototype.exportRevisions = function() {
+    return {repo_id: this.repo_id,
+	    blobs: this.blobs,
+	    tags: this.tags,
+	    remotes: this.remotes};
+};
+
+Mc.Repository.prototype.importRevisions = function(exportedData) {
+    for (var blobId in exportedData.blobs) {
+	if (!(blobId in this.blobs)) {
+	    this.blobs[blobId] = exportedData.blobs[blobId];
+	}
+    }
+    for (var tag in exportedData.tags) {
+	if (tag.substring(0, exportedData.repo_id.length) == exportedData.repo_id) {
+	    this.tags[tag] = exportedData.tags[tag];
+	}
+    }
 };
 
 Mc.Checkout = function(repo, blobIdOrTag) {
@@ -512,16 +567,12 @@ Mc.Checkout = function(repo, blobIdOrTag) {
 	this.directParent = undefined;
     }
 
-    this.emptyCache();
     this.resetTemporaryState();
 };
 
-Mc.Checkout.prototype.emptyCache = function() {
-    this.cache = {}; // blobId -> instance
-}
-
 Mc.Checkout.prototype.resetTemporaryState = function() {
-    this.newInstances = []; // list of {instance:, objectType:}
+    this.unmodifiedInodes = Mc.Util.deepCopy(this.inodes);
+    this.newInstances = []; // list of {instance:, objectType:, directParent:, additionalParent:}
     this.dirtyInodes = {}; // inodeId -> ({instanceIndex:instanceIndex} | {blobId:blobId})
     this.conflicts = null;
     this.anyDirty = false;
@@ -568,11 +619,19 @@ Mc.Checkout.prototype.resolveInode = function(inodeId) {
 Mc.Checkout.prototype.writeFile = function(fileName, instance, objectType) {
     objectType = objectType || "object";
     var inodeId = this.lookupFile(fileName, true);
-    this.writeInode(inodeId, instance, objectType);
+    this.writeInode(inodeId, instance, objectType, this.unmodifiedInodes[inodeId]);
 };
 
-Mc.Checkout.prototype.writeInode = function(inodeId, instance, objectType) {
-    this.newInstances.push({instance: Mc.Util.deepCopy(instance), objectType: objectType});
+Mc.Checkout.prototype.writeInode = function(inodeId,
+					    instance,
+					    objectType,
+					    directParent,
+					    additionalParent)
+{
+    this.newInstances.push({instance: Mc.Util.deepCopy(instance),
+			    objectType: objectType,
+			    directParent: directParent,
+			    additionalParent: additionalParent});
     this.dirtyInodes[inodeId] = {instanceIndex: (this.newInstances.length - 1)};
     this.anyDirty = true;
 };
@@ -593,14 +652,11 @@ Mc.Checkout.prototype.renameFile = function(sourceName, targetName) {
 };
 
 Mc.Checkout.prototype.getInstance = function(blobId) {
-    if (!(blobId in this.cache)) {
-	var instance = this.repo.lookup(blobId, false);
-	if (!instance) {
-	    throw {message: "Missing blob", blobId: blobId};
-	}
-	this.cache[blobId] = instance;
+    var instance = this.repo.lookup(blobId, false);
+    if (!instance) {
+	throw {message: "Missing blob", blobId: blobId};
     }
-    return this.cache[blobId];
+    return instance;
 };
 
 Mc.Checkout.prototype.readFile = function(fileName) {
@@ -650,9 +706,9 @@ Mc.Checkout.prototype.merge = function(otherBlobIdOrTag) {
     var b2 = repo.resolve(otherBlobIdOrTag);
     var b0 = repo.leastCommonAncestor(b1, b2);
 
-    var v1 = repo.lookup(b1, false);
-    var v2 = repo.lookup(b2, false);
-    var v0 = b0 ? repo.lookup(b0, false) : {inodes: {}, names: {}};
+    var v1 = repo.lookupUnsafe(b1, false);
+    var v2 = repo.lookupUnsafe(b2, false);
+    var v0 = b0 ? repo.lookupUnsafe(b0, false) : {inodes: {}, names: {}};
 
     var conflicts = {};
     var haveConflicts = false;
@@ -660,26 +716,50 @@ Mc.Checkout.prototype.merge = function(otherBlobIdOrTag) {
     var mergeResult;
 
     function inodeTableMerger(v1, v0, v2) {
-	var mr = repo.merge3(v1, v0, v2);
-	if ("ok" in mr) {
-	    if (mr.mergeBlobId) {
-		return {objectType: "inodeTable", ok: {blobId: mr.mergeBlobId}};
+	var mr;
+	mr = Mc.ObjectTypes.simpleScalar.merge(v1, v0, v2);
+	if (mr.conflict) {
+	    if (typeof(v1) == "undefined" || typeof(v2) == "undefined") {
+		// DieDieDieMerge for deleted entries.
+		return {objectType: "inodeTable", ok: {deleted: true}};
+	    }
+	    mr = repo.merge3(v1, v0, v2);
+	    if ("ok" in mr) {
+		if (mr.mergeBlobId) {
+		    return {objectType: "inodeTable", ok: {blobId: mr.mergeBlobId}};
+		} else {
+		    return {objectType: "inodeTable", ok: {instance: mr.ok,
+							   objectType: mr.objectType}};
+		}
 	    } else {
-		return {objectType: "inodeTable", ok: {instance: mr.ok,
-						       objectType: mr.objectType}};
+		return mr;
 	    }
 	} else {
-	    return mr;
+	    return {objectType: "inodeTable", ok: {blobId: mr.ok}};
 	}
     }
 
     function updateInodes(tab) {
 	for (var inodeId in tab) {
 	    var r = tab[inodeId];
-	    if (r.blobId) {
+	    if (r.deleted) {
+		delete $elf.inodes[inodeId];
+	    } else if (r.blobId) {
 		$elf.inodes[inodeId] = r.blobId;
 	    } else {
-		$elf.writeInode(inodeId, r.instance, r.objectType);
+		$elf.writeInode(inodeId,
+				r.instance,
+				r.objectType,
+				v1.inodes[inodeId],
+				v2.inodes[inodeId]);
+	    }
+	}
+    }
+
+    function updateNames(tab) {
+	for (var name in tab) {
+	    if ($elf.dirtyInodes[tab[name]] || $elf.inodes[tab[name]]) {
+		$elf.names[name] = tab[name];
 	    }
 	}
     }
@@ -701,11 +781,12 @@ Mc.Checkout.prototype.merge = function(otherBlobIdOrTag) {
 
     mergeResult = Mc.ObjectTypes.simpleObject.merge(v1.names, v0.names, v2.names,
 						    function (key) { return null; });
+    this.names = {};
     if ("ok" in mergeResult) {
-	this.names = mergeResult.ok;
+	updateNames(mergeResult.ok);
     } else {
 	haveConflicts = true;
-	this.names = mergeResult.partial;
+	updateNames(mergeResult.partial);
 	conflicts.names = mergeResult.conflicts;
     }
 
@@ -728,7 +809,10 @@ Mc.Checkout.prototype.commit = function(metadata) {
 		this.inodes[inodeId] = instanceLocation.blobId;
 	    } else {
 		var x = this.newInstances[instanceLocation.instanceIndex];
-		this.inodes[inodeId] = repo.store(x.instance, x.objectType);
+		this.inodes[inodeId] = repo.store(x.instance,
+						  x.objectType,
+						  x.directParent,
+						  x.additionalParent);
 	    }
 	}
 
@@ -744,9 +828,10 @@ Mc.Checkout.prototype.commit = function(metadata) {
 				      inodes: this.inodes,
 				      names: this.names,
 				      metadata: metadata,
-				      directParent: this.directParent,
-				      additionalParent: this.additionalParent
-				  }, "index");
+				  },
+				  "index",
+				  this.directParent,
+				  this.additionalParent);
 
 	this.resetTemporaryState();
 	this.directParent = commitId;
