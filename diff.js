@@ -185,6 +185,20 @@ Diff = {
         return result;
     },
 
+    strip_patch: function(patch) {
+	// Takes the output of Diff.diff_patch(), and removes
+	// information from it. It can still be used by patch(),
+	// below, but can no longer be inverted.
+	var newpatch = [];
+	for (var i = 0; i < patch.length; i++) {
+	    var chunk = patch[i];
+	    newpatch.push({file1: {offset: chunk.file1.offset,
+				   length: chunk.file1.length},
+			   file2: {chunk: chunk.file2.chunk}});
+	}
+	return newpatch;
+    },
+
     invert_patch: function(patch) {
         // Takes the output of Diff.diff_patch(), and inverts the
         // sense of it, so that it can be applied to file2 to give
@@ -217,7 +231,7 @@ Diff = {
         for (var chunkIndex = 0; chunkIndex < patch.length; chunkIndex++) {
             var chunk = patch[chunkIndex];
             copyCommon(chunk.file1.offset);
-            for (var lineIndex = 0; lineIndex < chunk.file2.length; lineIndex++) {
+            for (var lineIndex = 0; lineIndex < chunk.file2.chunk.length; lineIndex++) {
                 result.push(chunk.file2.chunk[lineIndex]);
             }
             commonOffset += chunk.file1.length;
