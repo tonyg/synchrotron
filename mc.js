@@ -190,7 +190,7 @@ Mc.ObjectTypes = {
 	    return {replacement: v1};
 	},
 	patch: function (v0, p) {
-	    if (p == null) return v0;
+	    if (p === null) return v0;
 	    return p.replacement;
 	},
 	merge: function(v1, v0, v2) {
@@ -204,10 +204,10 @@ Mc.ObjectTypes = {
     simpleText: {
 	diff: function (v0, v1) {
 	    var p = Diff.strip_patch(Diff.diff_patch(v0, v1));
-	    return (p.length == 0) ? null : p;
+	    return (p.length === 0) ? null : p;
 	},
 	patch: function (v0, p) {
-	    if (p == null) return v0;
+	    if (p === null) return v0;
 	    return Diff.patch(v0, p);
 	},
 	merge: function(v1, v0, v2) {
@@ -232,7 +232,7 @@ Mc.ObjectTypes = {
 	    for (var prop in common) {
 		var differ = (typeTableFun(prop) || Mc.ObjectTypes.simpleScalar).diff;
 		var p = differ(v0[prop], v1[prop]);
-		if (p != null) {
+		if (p !== null) {
 		    changed[prop] = p;
 		}
 	    }
@@ -245,7 +245,7 @@ Mc.ObjectTypes = {
 	},
 	patch: function (v0, p, typeTableFun) {
 	    var result = Mc.Util.deepCopy(v0);
-	    if (p == null) return result;
+	    if (p === null) return result;
 	    var k;
 	    if (!typeTableFun) {
 		typeTableFun = Mc.SimpleObjectTypeTableFun;
@@ -326,7 +326,7 @@ Mc.TypeDirectory = {
     "scalar": Mc.ObjectTypes.simpleScalar,
     "text": Mc.ObjectTypes.simpleText,
     "object": Mc.ObjectTypes.simpleObject,
-    "index": Mc.ObjectTypes.basicIndex,
+    "index": Mc.ObjectTypes.basicIndex
 };
 
 Mc.lookupType = function(typeName) {
@@ -368,7 +368,7 @@ Mc.Repository = function() {
 
 Mc.Repository.prototype.emptyCache = function() {
     this.cache = {}; // blobId -> unpickledInstance
-}
+};
 
 Mc.Repository.prototype.resolve = function(blobIdOrTag) {
     if (Mc.Util.blobIdKey(blobIdOrTag) in this.blobs) {
@@ -477,7 +477,7 @@ Mc.Repository.prototype.canMerge = function(b1, b2) {
 Mc.Repository.prototype.merge = function(b1, b2, metadata) {
     var ancestorBlobId = this.leastCommonAncestor(b1, b2);
     return this.merge3(b1, ancestorBlobId, b2, metadata);
-}
+};
 
 Mc.Repository.prototype.merge3 = function (b1, b0, b2, metadata) {
     b1 = this.resolve(b1);
@@ -784,7 +784,7 @@ Mc.Checkout.prototype.merge = function(otherBlobIdOrTag) {
 };
 
 Mc.Checkout.prototype.commit = function(metadata) {
-    if (this.conflicts != null) {
+    if (this.conflicts !== null) {
 	throw {message: "Cannot commit with outstanding conflicts"};
     }
 
@@ -815,7 +815,7 @@ Mc.Checkout.prototype.commit = function(metadata) {
 	var commitId = repo.store({
 				      inodes: this.inodes,
 				      names: this.names,
-				      metadata: metadata,
+				      metadata: metadata
 				  },
 				  "index",
 				  this.directParent,
