@@ -134,50 +134,46 @@ Mc.Util = (function()
     };
 })();
 
-/*
-
-A repository is a collection of hash-keyed blobs. When a blob is
-retrieved from the repository, it is revivified, and when it is
-inserted, it is pickled.
-
-Objects stored in a repository need to have a class, called an
-"objectType" below. Object types know how to:
-
- - pickle :: instance -> jsonobject
- - unpickle :: repository * blobid * jsonobject -> instance
- - diff :: v0:instance * v1:instance -> diff
- - patch :: instance * diff -> instance
- - merge :: v1:instance * v0:instance * v2:instance -> mergeresult
-
-In the Mc.ObjectTypes table below, if a (pseudo-)method is absent, a
-default implementation will be used.
-
-Diffs:
-
- - if no changes were made, null is returned (so null means empty diff)
-
-Merge results:
-
- - a totally clean merge results in the data structure itself in "ok":
-   { objectType: "scalar"|"text"|"object", ok: Scalar-or-list-or-dict }
-
- - a merge with conflicts results in:
-   { objectType: "scalar", conflict: {a: Scalar, o: Scalar, b: Scalar} }
-   { objectType: "text", result: [{ok:}, {conflict:}, ...] }
-   { objectType: "object", partial: dict, conflicts: {key: MergeResult} }
-   etc.
-
-(Note that dicts here are the only things that can have nested merge
-results.)
-
-An index is a commit-record that also maps "filename"s to inodeIds,
-and inodeIds to blobIds.
-
-A checkout is a non-version-controlled object that holds an index and
-also provides read/write/merge/commit services and a cache of
-unpickled objects.
-
-*/
+// A repository is a collection of hash-keyed blobs. When a blob is
+// retrieved from the repository, it is revivified, and when it is
+// inserted, it is pickled.
+//
+// Objects stored in a repository need to have a class, called an
+// "objectType" below. Object types know how to:
+//
+//  - pickle :: instance -> jsonobject
+//  - unpickle :: repository * blobid * jsonobject -> instance
+//  - diff :: v0:instance * v1:instance -> diff
+//  - patch :: instance * diff -> instance
+//  - merge :: v1:instance * v0:instance * v2:instance -> mergeresult
+//
+// In the Mc.ObjectTypes table below, if a (pseudo-)method is absent, a
+// default implementation will be used.
+//
+// Diffs:
+//
+//  - if no changes were made, null is returned (so null means empty diff)
+//
+// Merge results:
+//
+//  - a totally clean merge results in the data structure itself in "ok":
+//    { objectType: "scalar"|"text"|"object", ok: Scalar-or-list-or-dict }
+//
+//  - a merge with conflicts results in:
+//    { objectType: "scalar", conflict: {a: Scalar, o: Scalar, b: Scalar} }
+//    { objectType: "text", result: [{ok:}, {conflict:}, ...] }
+//    { objectType: "object", partial: dict, conflicts: {key: MergeResult} }
+//    etc.
+//
+// (Note that dicts here are the only things that can have nested merge
+// results.)
+//
+// An index is a commit-record that also maps "filename"s to inodeIds,
+// and inodeIds to blobIds.
+//
+// A checkout is a non-version-controlled object that holds an index and
+// also provides read/write/merge/commit services and a cache of
+// unpickled objects.
 
 Mc.ObjectTypes = {
     Default: {
