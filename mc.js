@@ -326,10 +326,6 @@ Mc.ObjectTypes = {
     }
 };
 
-Mc.ObjectTypes.inodeTable = Mc.Util.deepCopy(Mc.ObjectTypes.simpleObject);
-Mc.ObjectTypes.inodeTable.merge = function(v1, v0, v2) {
-};
-
 Mc.TypeDirectory = {
     "scalar": Mc.ObjectTypes.simpleScalar,
     "text": Mc.ObjectTypes.simpleText,
