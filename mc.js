@@ -300,8 +300,6 @@ Mc.ObjectTypes = {
 	    d = Mc.ObjectTypes.simpleObject.diff(v0.names, v1.names, Mc.RawObjectTypeTableFun);
 	    if (d) { result.names = d; }
 	    result.metadata = v1.metadata;
-	    result.directParent = v1.directParent;
-	    result.additionalParent = v1.additionalParent;
 	    return result;
 	},
 	patch: function (v0, p) {
@@ -309,8 +307,6 @@ Mc.ObjectTypes = {
 	    result.inodes = Mc.ObjectTypes.simpleObject.patch(result.inodes, p.inodes || null);
 	    result.names = Mc.ObjectTypes.simpleObject.patch(result.names, p.names || null);
 	    result.metadata = p.metadata;
-	    result.directParent = p.directParent;
-	    result.additionalParent = p.additionalParent;
 	    return result;
 	},
 	merge: function(v1, v0, v2) {
