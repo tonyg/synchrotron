@@ -24,26 +24,26 @@ Mc.Tests = {
 
         function d(x) {
             print(x);
-	    //repo.emptyCache();
+            //repo.emptyCache();
             //print(pp({fs: fs}));
-	    fs.forEachFile(function (fileName) {
-			       print(fileName + ": " +
-				     fs.readFile(fileName).instance.text.join(" "));
-			   });
+            fs.forEachFile(function (fileName) {
+                               print(fileName + ": " +
+                                     fs.readFile(fileName).instance.text.join(" "));
+                           });
             print();
         }
 
         d("start");
 
-	fs.writeFile("File A", {"text": "A B C D E".split(/ /)});
-	fs.writeFile("File B", {"text": ["One line"]});
-	d("pre-rA");
+        fs.writeFile("File A", {"text": "A B C D E".split(/ /)});
+        fs.writeFile("File B", {"text": ["One line"]});
+        d("pre-rA");
         var rA = fs.commit({comment: "First commit"});
         d("post-rA");
 
         fs.setBranch("BBB");
 
-	fs.writeFile("File A", {"text": "G G G A B C D E".split(/ /)});
+        fs.writeFile("File A", {"text": "G G G A B C D E".split(/ /)});
         var rB1 = fs.commit({comment: "Second commit"});
         d("post-rB1");
 
@@ -54,16 +54,16 @@ Mc.Tests = {
 	fs = new Mc.Checkout(repo, rA);
         d("post-update-to-rA");
 
-	fs.renameFile("File A", "File A, renamed");
+        fs.renameFile("File A", "File A, renamed");
         fs.writeFile("File A, renamed", {"text": "A B X D E".split(/ /)});
         Mc.Tests.revisionC = fs.commit({comment: "Fourth commit"});
         d("post-rC");
 
-	fs.merge("BBB");
-	d("post-merge");
+        fs.merge("BBB");
+        d("post-merge");
 
-	var rMerger = fs.commit({comment: "Merge BBB into master"});
-	d("post-merge-commit");
+        var rMerger = fs.commit({comment: "Merge BBB into master"});
+        d("post-merge-commit");
 
         fs = new Mc.Checkout(repo, rMerger);
         d("post-rMerger");
@@ -78,9 +78,9 @@ Mc.Tests = {
         var rB3 = fs.commit({comment: "Remove the unrenamed file A"});
         d("post-rB3");
 
-	fs.merge("master");
-	d("post-rMerger2");
-	var rMerger2 = fs.commit({comment: "Merge master into BBB"});
+        fs.merge("master");
+        d("post-rMerger2");
+        var rMerger2 = fs.commit({comment: "Merge master into BBB"});
         d("post-rMerger2-commit");
 
         print("---------------------------------------------------------------------------");
@@ -93,7 +93,7 @@ Mc.Tests = {
         var pp = Mc.Tests.pp;
 
         var repo = new Mc.Repository();
-	var ed = JSON.parse(Mc.Tests.exportedJson);
+        var ed = JSON.parse(Mc.Tests.exportedJson);
         repo.importRevisions(ed);
 
         var fs = new Mc.Checkout(repo);
