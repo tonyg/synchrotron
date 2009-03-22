@@ -325,6 +325,10 @@ Dvcs.Repository.prototype.lookupParents = function (revId) {
     return result;
 };
 
+Dvcs.Repository.prototype.lookupChildren = function (revId) {
+    return this.children[revId] || [];
+};
+
 Dvcs.Repository.prototype.canMerge = function(r1, r2) {
     var $elf = this;
     function lookupParents(revId) { return $elf.lookupParents(revId); }

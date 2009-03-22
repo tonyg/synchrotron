@@ -539,6 +539,16 @@ Mc.Repository.prototype.tag = function(blobId, tagName, isBranch) {
     this.tags[this.repoId + "/" + tagName] = {blobId: blobId, isBranch: isBranch || false};
 };
 
+Mc.Repository.prototype.allBranches = function() {
+    var result = {};
+    for (var tag in this.tags) {
+	if (this.tags[tag].isBranch) {
+	    result[tag] = this.tags[tag].blobId;
+	}
+    }
+    return result;
+};
+
 Mc.Repository.prototype.exportRevisions = function() {
     return {repoId: this.repoId,
 	    blobs: this.blobs,

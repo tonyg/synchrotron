@@ -36,7 +36,7 @@ DrawDvcs = {
             for (i = 0; i < parents.length; i++) {
                 parent = parents[i];
                 if (childCount[parent] == undefined) {
-                    childCount[parent] = (repo.children[parent] || []).length;
+                    childCount[parent] = repo.lookupChildren(parent).length;
                 }
                 childCount[parent] = childCount[parent] - 1;
                 if (childCount[parent] === 0) {

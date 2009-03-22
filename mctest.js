@@ -109,6 +109,58 @@ Mc.Tests = {
         print("================================================================= Rt2");
         print(pp({fs: fs}));
         print();
+
+	var children = {};
+	var branches = {};
+	function recordChild(parentId, childId) {
+	    if (parentId) {
+		if (!(parentId in children)) children[parentId] = {};
+		children[parentId][childId] = 1;
+	    }
+	}
+	function recordBranch(blobId, branchName) {
+	    if (!(blobId in branches)) branches[blobId] = {};
+	    branches[blobId][branchName] = 1;
+	}
+	function traceBranch(branchName, blobId) {
+	    if (blobId) {
+		var entry = repo.blobs[Mc.Util.blobIdKey(blobId)];
+		traceBranch(branchName, entry.directParent);
+		traceBranch(branchName, entry.additionalParent);
+		recordBranch(blobId, branchName);
+		recordChild(entry.directParent, blobId);
+		recordChild(entry.additionalParent, blobId);
+	    }
+	}
+	var allBranches = repo.allBranches();
+	for (var tag in allBranches) {
+	    traceBranch(tag, allBranches[tag]);
+	}
+
+	var repoWrapper = {
+	    childlessRevisions: function() {
+		var result = {};
+		var bs = allBranches;
+		for (var tag in bs) {
+		    result[bs[tag]] = 1;
+		}
+		return Mc.Util.dict_to_set_list(result);
+	    },
+	    lookupParents: function(blobId) {
+		return repo.lookupParents(blobId);
+	    },
+	    lookupChildren: function(blobId) {
+		return Mc.Util.dict_to_set_list(children[blobId]);
+	    },
+	    lookupRev: function(blobId) {
+		return {
+		    branch: Mc.Util.dict_to_set_list(branches[blobId]).join(","),
+		    metadata: {summary: (repo.lookup(blobId).metadata || {}).comment}
+		};
+	    }
+	};
+	print(pp({children: children, branches: branches}));
+	print(DrawDvcs.simpleRenderRepository(repoWrapper));
     }
 };
 
