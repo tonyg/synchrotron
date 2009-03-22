@@ -1,5 +1,5 @@
-// Copyright (c) 2008 Tony Garnock-Jones <tonyg@lshift.net>
-// Copyright (c) 2008 LShift Ltd. <query@lshift.net>
+// Copyright (c) 2008-2009 Tony Garnock-Jones <tonyg@lshift.net>
+// Copyright (c) 2008-2009 LShift Ltd. <query@lshift.net>
 //
 // Permission is hereby granted, free of charge, to any person
 // obtaining a copy of this software and associated documentation files
@@ -353,16 +353,17 @@ Mc.SimpleObjectTypeTableFun = Mc.typeTableFun(Mc.SimpleObjectTypeTable);
 Mc.RawObjectTypeTableFun = Mc.typeTableFun({});
 
 Mc.Repository = function() {
-    this.repo_id = Mc.Util.random_uuid();
+    this.repoId = Mc.Util.random_uuid();
     this.blobs = {}; // blobId -> pickledInstanceRecord
-    this.tags = {}; // repoid/bookmarkname -> blobId
-    this.remotes = {}; // remotename -> remote_repo_id
+    this.tags = {}; // repoid/bookmarkname -> {blobId: blobId, isBranch: boolean}
+    this.remotes = {}; // remotename -> remote_repoId
     this.accidentalCleanMerge = true; // set to false to disable
 
     this.cache = {}; // blobId -> unpickledInstance
 
     var checkout = new Mc.Checkout(this, null);
     checkout.anyDirty = true; // cheeky
+    checkout.activeBranch = "master"; // *very* cheeky
     checkout.commit();
 };
 
@@ -370,25 +371,44 @@ Mc.Repository.prototype.emptyCache = function() {
     this.cache = {}; // blobId -> unpickledInstance
 };
 
+Mc.Repository.prototype.lookupTag = function(tagOrBranch) {
+    if (!tagOrBranch) {
+	tagOrBranch = "master";
+    }
+
+    var slashPos = tagOrBranch.indexOf("/");
+    var repoName = null;
+    var repoId;
+    var bookmarkName;
+    if (slashPos == -1) {
+	repoId = this.repoId;
+	bookmarkName = tagOrBranch;
+    } else {
+	repoName = tagOrBranch.substring(0, slashPos);
+	repoId = this.remotes[repoName] || repoName; // deals with a given literal repoId
+	bookmarkName = tagOrBranch.substring(slashPos + 1);
+    }
+
+    var finalTag = repoId + "/" + bookmarkName;
+    var tagInfo = this.tags[finalTag];
+    if (tagInfo) {
+	return { repoName: repoName,
+		 isRemote: (repoName != null),
+		 repoId: repoId,
+		 bookmarkName: bookmarkName,
+		 blobId: tagInfo.blobId,
+		 isBranch: tagInfo.isBranch };
+    } else {
+	return null;
+    }
+};
+
 Mc.Repository.prototype.resolve = function(blobIdOrTag) {
     if (Mc.Util.blobIdKey(blobIdOrTag) in this.blobs) {
 	return blobIdOrTag;
     } else {
-	if (!blobIdOrTag) {
-	    blobIdOrTag = "master";
-	}
-
-	var slashPos = blobIdOrTag.indexOf("/");
-	if (slashPos == -1) {
-	    blobIdOrTag = this.repo_id + "/" + blobIdOrTag;
-	} else {
-	    var remoteName = blobIdOrTag.substring(0, slashPos);
-	    var bookmarkName = blobIdOrTag.substring(slashPos + 1);
-	    var repoId = this.remotes[remoteName];
-	    if (repoId) { remoteName = repoId; }
-	    blobIdOrTag = remoteName + "/" + bookmarkName;
-	}
-	return this.tags[blobIdOrTag];
+	var tagInfo = this.lookupTag(blobIdOrTag);
+	return tagInfo ? tagInfo.blobId : null;
     }
 };
 
@@ -515,12 +535,12 @@ Mc.Repository.prototype.merge3 = function (b1, b0, b2, metadata) {
     return result;
 };
 
-Mc.Repository.prototype.tag = function(blobId, tagName) {
-    this.tags[this.repo_id + "/" + tagName] = blobId;
+Mc.Repository.prototype.tag = function(blobId, tagName, isBranch) {
+    this.tags[this.repoId + "/" + tagName] = {blobId: blobId, isBranch: isBranch || false};
 };
 
 Mc.Repository.prototype.exportRevisions = function() {
-    return {repo_id: this.repo_id,
+    return {repoId: this.repoId,
 	    blobs: this.blobs,
 	    tags: this.tags,
 	    remotes: this.remotes};
@@ -533,7 +553,7 @@ Mc.Repository.prototype.importRevisions = function(exportedData) {
 	}
     }
     for (var tag in exportedData.tags) {
-	if (tag.substring(0, exportedData.repo_id.length) == exportedData.repo_id) {
+	if (tag.substring(0, exportedData.repoId.length) == exportedData.repoId) {
 	    this.tags[tag] = exportedData.tags[tag];
 	}
     }
@@ -541,7 +561,9 @@ Mc.Repository.prototype.importRevisions = function(exportedData) {
 
 Mc.Checkout = function(repo, blobIdOrTag) {
     this.repo = repo;
-    this.branchName = "master";
+
+    var tagInfo = repo.lookupTag(blobIdOrTag);
+    this.activeBranch = (tagInfo && !tagInfo.isRemote) ? tagInfo.bookmarkName : null;
 
     var resolved = repo.resolve(blobIdOrTag);
     var index = repo.lookup(resolved, false);
@@ -573,8 +595,17 @@ Mc.Checkout.prototype.ensureClean = function(what) {
     }
 };
 
-Mc.Checkout.prototype.setBranch = function(branchName) {
-    this.branchName = branchName;
+Mc.Checkout.prototype.tag = function(tagName, force, isBranch) {
+    var existing = this.repo.lookupTag(tagName);
+    if (existing && !force) {
+	return false;
+    } else {
+	this.repo.tag(this.directParent, tagName, isBranch || false);
+	if (isBranch) {
+	    this.activeBranch = tagName;
+	}
+	return true;
+    }
 };
 
 Mc.Checkout.prototype.lookupFile = function(fileName, createIfAbsent) {
@@ -692,6 +723,9 @@ Mc.Checkout.prototype.merge = function(otherBlobIdOrTag) {
 
     var b1 = this.directParent;
     var b2 = repo.resolve(otherBlobIdOrTag);
+    if (!b2) {
+	throw {message: "Could not resolve revision name", blobIdOrTag: otherBlobIdOrTag};
+    }
     var b0 = repo.leastCommonAncestor(b1, b2);
 
     var v1 = repo.lookupUnsafe(b1, false);
@@ -788,6 +822,10 @@ Mc.Checkout.prototype.commit = function(metadata) {
 	throw {message: "Cannot commit with outstanding conflicts"};
     }
 
+    if (!this.activeBranch) {
+	throw {message: "Cannot commit; no branch specified"};
+    }
+
     if (this.anyDirty) {
 	var repo = this.repo;
 
@@ -824,9 +862,7 @@ Mc.Checkout.prototype.commit = function(metadata) {
 	this.resetTemporaryState();
 	this.directParent = commitId;
 
-	if (this.branchName) {
-	    repo.tag(commitId, this.branchName);
-	}
+	repo.tag(commitId, this.activeBranch, true);
     }
     return this.directParent;
 };

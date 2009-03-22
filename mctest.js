@@ -5,9 +5,16 @@ function noisyLoad(filename) {
     load(filename);
 }
 
+function assert(condition, explanation) {
+    if (!condition) {
+	throw {message: "Assertion failure", explanation: explanation};
+    }
+}
+
 noisyLoad("json2.js");
 noisyLoad("diff.js");
 noisyLoad("graph.js");
+noisyLoad("draw.js");
 noisyLoad("sha1.js");
 noisyLoad("mc.js");
 
@@ -41,7 +48,7 @@ Mc.Tests = {
         var rA = fs.commit({comment: "First commit"});
         d("post-rA");
 
-        fs.setBranch("BBB");
+        assert(fs.tag("BBB", false, true), "creating non-forced branch tag");
 
         fs.writeFile("File A", {"text": "G G G A B C D E".split(/ /)});
         var rB1 = fs.commit({comment: "Second commit"});
@@ -51,7 +58,8 @@ Mc.Tests = {
         var rB2 = fs.commit({comment: "Third commit"});
         d("post-rB2");
 
-	fs = new Mc.Checkout(repo, rA);
+        fs = new Mc.Checkout(repo, rA);
+        assert(fs.tag("master", true, true), "forcing subsequent commits to be on 'master'");
         d("post-update-to-rA");
 
         fs.renameFile("File A", "File A, renamed");
@@ -73,7 +81,6 @@ Mc.Tests = {
         print();
 
         fs = new Mc.Checkout(repo, "BBB");
-	fs.setBranch("BBB");
         fs.deleteFile("File A");
         var rB3 = fs.commit({comment: "Remove the unrenamed file A"});
         d("post-rB3");
@@ -97,8 +104,8 @@ Mc.Tests = {
         repo.importRevisions(ed);
 
         var fs = new Mc.Checkout(repo);
-	fs.merge(ed.repo_id + "/master");
-	fs.commit({comment: "Fast-forward to remote's master"});
+        fs.merge(ed.repoId + "/master");
+        fs.commit({comment: "Fast-forward to remote's master"});
         print("================================================================= Rt2");
         print(pp({fs: fs}));
         print();
