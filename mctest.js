@@ -31,7 +31,7 @@ Mc.Tests = {
 
         function d(x) {
             print(x);
-            //repo.emptyCache();
+            //repo.emptyCaches();
             //print(pp({fs: fs}));
             fs.forEachFile(function (fileName) {
                                print(fileName + ": " +

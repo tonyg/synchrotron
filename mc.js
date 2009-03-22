@@ -359,7 +359,7 @@ Mc.Repository = function() {
     this.remotes = {}; // remotename -> remote_repoId
     this.accidentalCleanMerge = true; // set to false to disable
 
-    this.cache = {}; // blobId -> unpickledInstance
+    this.emptyCaches();
 
     var checkout = new Mc.Checkout(this, null);
     checkout.anyDirty = true; // cheeky
@@ -367,7 +367,7 @@ Mc.Repository = function() {
     checkout.commit();
 };
 
-Mc.Repository.prototype.emptyCache = function() {
+Mc.Repository.prototype.emptyCaches = function() {
     this.cache = {}; // blobId -> unpickledInstance
 };
 
