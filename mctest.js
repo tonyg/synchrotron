@@ -45,17 +45,17 @@ Mc.Tests = {
         fs.writeFile("File A", {"text": "A B C D E".split(/ /)});
         fs.writeFile("File B", {"text": ["One line"]});
         d("pre-rA");
-        var rA = fs.commit({comment: "First commit"});
+        var rA = fs.commit({summary: "First commit"});
         d("post-rA");
 
         assert(fs.tag("BBB", false, true), "creating non-forced branch tag");
 
         fs.writeFile("File A", {"text": "G G G A B C D E".split(/ /)});
-        var rB1 = fs.commit({comment: "Second commit"});
+        var rB1 = fs.commit({summary: "Second commit"});
         d("post-rB1");
 
         fs.writeFile("File A", {"text": "A B C D E G G G A B C D E".split(/ /)});
-        var rB2 = fs.commit({comment: "Third commit"});
+        var rB2 = fs.commit({summary: "Third commit"});
         d("post-rB2");
 
         fs = new Mc.Checkout(repo, rA);
@@ -64,13 +64,13 @@ Mc.Tests = {
 
         fs.renameFile("File A", "File A, renamed");
         fs.writeFile("File A, renamed", {"text": "A B X D E".split(/ /)});
-        Mc.Tests.revisionC = fs.commit({comment: "Fourth commit"});
+        Mc.Tests.revisionC = fs.commit({summary: "Fourth commit"});
         d("post-rC");
 
         fs.merge("BBB");
         d("post-merge");
 
-        var rMerger = fs.commit({comment: "Merge BBB into master"});
+        var rMerger = fs.commit({summary: "Merge BBB into master"});
         d("post-merge-commit");
 
         fs = new Mc.Checkout(repo, rMerger);
@@ -82,12 +82,12 @@ Mc.Tests = {
 
         fs = new Mc.Checkout(repo, "BBB");
         fs.deleteFile("File A");
-        var rB3 = fs.commit({comment: "Remove the unrenamed file A"});
+        var rB3 = fs.commit({summary: "Remove the unrenamed file A"});
         d("post-rB3");
 
         fs.merge("master");
         d("post-rMerger2");
-        var rMerger2 = fs.commit({comment: "Merge master into BBB"});
+        var rMerger2 = fs.commit({summary: "Merge master into BBB"});
         d("post-rMerger2-commit");
 
         print("---------------------------------------------------------------------------");
@@ -105,7 +105,7 @@ Mc.Tests = {
 
         var fs = new Mc.Checkout(repo);
         fs.merge(ed.repoId + "/master");
-        fs.commit({comment: "Fast-forward to remote's master"});
+        fs.commit({summary: "Fast-forward to remote's master"});
         print("================================================================= Rt2");
         print(pp({fs: fs}));
         print();
@@ -155,7 +155,7 @@ Mc.Tests = {
 	    lookupRev: function(blobId) {
 		return {
 		    branch: Mc.Util.dict_to_set_list(branches[blobId]).join(","),
-		    metadata: {summary: (repo.lookup(blobId).metadata || {}).comment}
+		    metadata: (repo.lookup(blobId).metadata || {})
 		};
 	    }
 	};
