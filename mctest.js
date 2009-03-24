@@ -155,7 +155,7 @@ Mc.Tests = {
 	    lookupRev: function(blobId) {
 		return {
 		    branch: Mc.Util.dict_to_set_list(branches[blobId]).join(","),
-		    metadata: (repo.lookup(blobId).metadata || {})
+		    metadata: repo.lookup(blobId).metadata
 		};
 	    }
 	};
