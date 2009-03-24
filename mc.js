@@ -356,7 +356,7 @@ Mc.Repository = function() {
     this.repoId = Mc.Util.random_uuid();
     this.blobs = {}; // blobId -> pickledInstanceRecord
     this.tags = {}; // repoid/bookmarkname -> {blobId: blobId, isBranch: boolean}
-    this.remotes = {}; // remotename -> remote_repoId
+    this.remotes = {}; // remotename -> {repoId: remote_repoId}
     this.accidentalCleanMerge = true; // set to false to disable
 
     this.emptyCaches();
@@ -385,7 +385,12 @@ Mc.Repository.prototype.lookupTag = function(tagOrBranch) {
 	bookmarkName = tagOrBranch;
     } else {
 	repoName = tagOrBranch.substring(0, slashPos);
-	repoId = this.remotes[repoName] || repoName; // deals with a given literal repoId
+	var repoInfo = this.remotes[repoName];
+	if (repoInfo) {
+	    repoId = repoInfo.repoId;
+	} else {
+	    repoId = repoName; // deals with a given literal repoId
+	}
 	bookmarkName = tagOrBranch.substring(slashPos + 1);
     }
 
@@ -400,6 +405,20 @@ Mc.Repository.prototype.lookupTag = function(tagOrBranch) {
 		 isBranch: tagInfo.isBranch };
     } else {
 	return null;
+    }
+};
+
+Mc.Repository.prototype.prettyTag = function(fullTag) {
+    var pieces = fullTag.split("/");
+    if (pieces[0] == this.repoId) {
+	return pieces[1];
+    } else {
+	for (var repoName in this.remotes) {
+	    if (pieces[0] == this.remotes[repoName].repoId) {
+		return repoName + "/" + pieces[1];
+	    }
+	}
+	return fullTag;
     }
 };
 

@@ -104,7 +104,8 @@ Mc.Tests = {
         repo.importRevisions(ed);
 
         var fs = new Mc.Checkout(repo);
-        fs.merge(ed.repoId + "/master");
+	repo.remotes["origin"] = {repoId: ed.repoId};
+        fs.merge("origin/master");
         fs.commit({summary: "Fast-forward to remote's master"});
         print("================================================================= Rt2");
         print(pp({fs: fs}));
@@ -134,7 +135,7 @@ Mc.Tests = {
 	}
 	var allBranches = repo.allBranches();
 	for (var tag in allBranches) {
-	    traceBranch(tag, allBranches[tag]);
+	    traceBranch(repo.prettyTag(tag), allBranches[tag]);
 	}
 
 	var repoWrapper = {
