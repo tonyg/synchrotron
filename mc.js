@@ -513,12 +513,12 @@ Mc.Repository.prototype.canMerge = function(b1, b2) {
     return !(b1 == ancestorBlobId || b2 == ancestorBlobId);
 };
 
-Mc.Repository.prototype.merge = function(b1, b2, metadata) {
+Mc.Repository.prototype.merge = function(b1, b2) {
     var ancestorBlobId = this.leastCommonAncestor(b1, b2);
-    return this.merge3(b1, ancestorBlobId, b2, metadata);
+    return this.merge3(b1, ancestorBlobId, b2);
 };
 
-Mc.Repository.prototype.merge3 = function (b1, b0, b2, metadata) {
+Mc.Repository.prototype.merge3 = function (b1, b0, b2) {
     b1 = this.resolve(b1);
     b2 = this.resolve(b2);
 
