@@ -176,12 +176,21 @@ Mc.Tests = {
         print();
 
 	print(DrawMcRepo(repo));
+    },
+
+    Rt3: function() {
+        var pp = Mc.Tests.pp;
+	var repo = new Mc.Repository();
+	var b1 = repo.store({"text": ["A", "B", "C"]}, "object", null, null);
+	var b2 = repo.store({"text": ["A", "D", "C"]}, "object", null, null);
+	print(pp({b1: b1, b2: b2, rt3MergeResult: repo.merge(b1, b2)}));
     }
 };
 
 Mc._debugMode = true;
 Mc.Tests.Rt1();
 Mc.Tests.Rt2();
+//Mc.Tests.Rt3();
 
 } catch (e) {
     print(uneval(e));
