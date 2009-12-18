@@ -190,7 +190,7 @@ Mc.Tests = {
 Mc._debugMode = true;
 Mc.Tests.Rt1();
 Mc.Tests.Rt2();
-//Mc.Tests.Rt3();
+Mc.Tests.Rt3();
 
 } catch (e) {
     print(uneval(e));

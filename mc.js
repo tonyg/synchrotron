@@ -141,6 +141,7 @@ Mc.Util = (function()
 // Objects stored in a repository need to have a class, called an
 // "objectType" below. Object types know how to:
 //
+//  - emptyInstance :: () -> instance
 //  - pickle :: instance -> jsonobject
 //  - unpickle :: repository * blobid * jsonobject -> instance
 //  - diff :: v0:instance * v1:instance -> diff
@@ -177,6 +178,7 @@ Mc.Util = (function()
 
 Mc.ObjectTypes = {
     Default: {
+	emptyInstance: function () { Mc.Util.subclassResponsibility("emptyInstance"); },
 	pickle: function (instance) { return instance; },
 	unpickle: function (repo, blobId, jsonobject) { return jsonobject; },
 	diff: function (v0, v1) { Mc.Util.subclassResponsibility("diff"); },
@@ -185,6 +187,7 @@ Mc.ObjectTypes = {
     },
 
     simpleScalar: {
+	emptyInstance: function () { return undefined; },
 	diff: function (v0, v1) {
 	    if (v0 == v1) return null;
 	    return {replacement: v1};
@@ -202,6 +205,7 @@ Mc.ObjectTypes = {
     },
 
     simpleText: {
+	emptyInstance: function () { return []; },
 	diff: function (v0, v1) {
 	    var p = Diff.strip_patch(Diff.diff_patch(v0, v1));
 	    return (p.length === 0) ? null : p;
@@ -221,6 +225,7 @@ Mc.ObjectTypes = {
     },
 
     simpleObject: {
+	emptyInstance: function () { return {}; },
 	diff: function (v0, v1, typeTableFun) {
 	    var removed = Mc.Util.dict_difference(v0, v1);
 	    var added = Mc.Util.dict_difference(v1, v0);
@@ -273,8 +278,10 @@ Mc.ObjectTypes = {
 		typeTableFun = Mc.SimpleObjectTypeTableFun;
 	    }
 	    for (var prop in props) {
-		var merger = (typeTableFun(prop) || Mc.ObjectTypes.simpleScalar).merge;
-		var mergedPropValue = merger(v1[prop], v0[prop], v2[prop]);
+		var propType = (typeTableFun(prop) || Mc.ObjectTypes.simpleScalar);
+		var mergedPropValue = propType.merge(Mc.validInstance(propType, v1[prop]),
+						     Mc.validInstance(propType, v0[prop]),
+						     Mc.validInstance(propType, v2[prop]));
 		if ("ok" in mergedPropValue) {
 		    bResult[prop] = mergedPropValue.ok;
 		} else {
@@ -292,6 +299,7 @@ Mc.ObjectTypes = {
     },
 
     basicIndex: {
+	emptyInstance: function () { return {inodes: {}, names: {}, metadata: undefined}; },
 	diff: function (v0, v1) {
 	    var result = {};
 	    var d;
@@ -336,6 +344,20 @@ Mc.lookupType = function(typeName) {
 	       typeName: typeName};
     }
     return t;
+};
+
+Mc.typeMethod = function (t, methodName) {
+    if (!t) {
+	t = Mc.ObjectTypes.Default;
+    }
+    return (t[methodName] || Mc.ObjectTypes.Default[methodName]);
+};
+
+Mc.validInstance = function (t, maybeInstance) {
+    if (typeof(maybeInstance) == "undefined") {
+	return Mc.typeMethod(t, "emptyInstance")();
+    }
+    return maybeInstance;
 };
 
 Mc.SimpleObjectTypeTable = {
@@ -447,14 +469,14 @@ Mc.Repository.prototype.store = function(instance, // a picklable object
     var t = Mc.lookupType(objectType);
     var entry = {directParent: directParent, additionalParent: additionalParent};
 
-    var jsonInstance = (t.pickle || Mc.ObjectTypes.Default.pickle)(instance);
+    var jsonInstance = Mc.typeMethod(t, "pickle")(instance);
     var jsonText = JSON.stringify(jsonInstance);
     var blobId = SHA1.hex_sha1(SHA1.encode_utf8(jsonText));
     if (Mc._debugMode) { blobId = "blob-" + blobId.substring(0, 8); }
 
     if (directParent) {
-	var differ = t.diff || Mc.ObjectTypes.Default.diff;
-	var diffJson = differ(this.lookupUnsafe(directParent), instance);
+	var differ = Mc.typeMethod(t, "diff");
+	var diffJson = differ(Mc.validInstance(t, this.lookupUnsafe(directParent)), instance);
 	entry.diff = JSON.stringify(diffJson);
     } else {
 	entry.full = jsonText;
@@ -481,11 +503,12 @@ Mc.Repository.prototype.lookupUnsafe = function (blobId, shouldResolve) {
 	var t = Mc.lookupType(Mc.Util.blobIdType(resolved));
 
 	if (entry.diff) {
-	    var patcher = (t.patch || Mc.ObjectTypes.Default.patch);
-	    this.cache[resolved] = patcher(this.lookupUnsafe(entry.directParent),
-					   JSON.parse(entry.diff));
+	    var patcher = Mc.typeMethod(t, "patch");
+	    this.cache[resolved] =
+		patcher(Mc.validInstance(t, this.lookupUnsafe(entry.directParent)),
+			JSON.parse(entry.diff));
 	} else {
-	    var unpickler = (t.unpickle || Mc.ObjectTypes.Default.unpickle);
+	    var unpickler = Mc.typeMethod(t, "unpickle");
 	    this.cache[resolved] = unpickler(this, resolved, JSON.parse(entry.full));
 	}
     }
@@ -523,7 +546,9 @@ Mc.Repository.prototype.merge3 = function (b1, b0, b2) {
     b2 = this.resolve(b2);
 
     var objectType = Mc.Util.blobIdType(b1);
-    if ((objectType != Mc.Util.blobIdType(b2)) || (objectType != Mc.Util.blobIdType(b0)))
+    var ancestorObjectType = Mc.Util.blobIdType(b0);
+    if ((objectType != Mc.Util.blobIdType(b2)) || ((ancestorObjectType !== null) &&
+						   (objectType != Mc.Util.blobIdType(b0))))
     {
 	throw {message: "Object type mismatch",
 	       blobIds: [b1, b0, b2]};
@@ -537,7 +562,13 @@ Mc.Repository.prototype.merge3 = function (b1, b0, b2) {
 
     var inst1 = this.lookupUnsafe(b1);
     var inst2 = this.lookupUnsafe(b2);
-    var inst0 = this.lookupUnsafe(b0); // note: not resolved further!
+    var inst0;
+
+    if (b0) {
+	inst0 = this.lookupUnsafe(b0, false); // note: not resolved further!
+    } else {
+	inst0 = undefined;
+    }
 
     if (this.accidentalCleanMerge && (b1 == b2)) {
 	return {objectType: objectType, ok: inst1, mergeBlobId: b1};
@@ -550,7 +581,7 @@ Mc.Repository.prototype.merge3 = function (b1, b0, b2) {
 	return {objectType: objectType, ok: inst2, mergeBlobId: b2};
     }
 
-    var result = (t.merge || Mc.ObjectTypes.Default.merge)(inst1, inst0, inst2);
+    var result = Mc.typeMethod(t, "merge")(inst1, Mc.validInstance(t, inst0), inst2);
     return result;
 };
 
@@ -818,7 +849,10 @@ Mc.Checkout.prototype.merge = function(otherBlobIdOrTag) {
     mergeResult = Mc.ObjectTypes.simpleObject.merge(v1.inodes, v0.inodes, v2.inodes,
 						    function (key) {
 							return {
-							    merge: inodeTableMerger
+							    merge: inodeTableMerger,
+							    emptyInstance: function () {
+								return undefined;
+							    }
 							};
 						    });
     this.inodes = {};
