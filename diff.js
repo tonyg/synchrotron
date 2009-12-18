@@ -354,7 +354,7 @@ Diff = {
 
         var okLines = [];
         function flushOk() {
-            if (okLines) {
+            if (okLines.length) {
                 result.push({ok: okLines});
             }
             okLines = [];
