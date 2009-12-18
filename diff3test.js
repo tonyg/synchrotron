@@ -57,6 +57,31 @@ Y
 E
 */
 
+DumpDiff3("0 1 2 A X DD C Y E",
+	  "0 1 2 A op BB X DD C Y E",
+	  "0 1 2 A AA C Y E");
+
+/*
+0
+1
+2
+A
+<<<<<<< a
+op
+BB
+X
+DD
+||||||| o
+X
+DD
+=======
+AA
+>>>>>>> b
+C
+Y
+E
+*/
+
 } catch (e) {
     print(uneval(e));
     quit(1);
