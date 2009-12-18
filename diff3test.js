@@ -29,6 +29,34 @@ DumpDiff3("",
 	  "A B C",
 	  "A D C");
 
+DumpDiff3("0 1 2 A X DD C Y E",
+	  "0 1 2 A X DD op BB Y E",
+	  "0 1 2 A AA C Y E");
+/*
+Output from immediately previous should, but doesn't, match what
+diff3 -m says:
+
+0
+1
+2
+A
+<<<<<<< a
+X
+DD
+op
+BB
+||||||| o
+X
+DD
+C
+=======
+AA
+C
+>>>>>>> b
+Y
+E
+*/
+
 } catch (e) {
     print(uneval(e));
     quit(1);
