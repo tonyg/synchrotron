@@ -311,7 +311,7 @@ Diff = {
             while (hunkIndex < hunks.length - 1) {
                 var maybeOverlapping = hunks[hunkIndex + 1];
                 var maybeLhs = maybeOverlapping[0];
-                if (maybeLhs >= regionRhs) break;
+                if (maybeLhs > regionRhs) break;
                 regionRhs = maybeLhs + maybeOverlapping[2];
                 hunkIndex++;
             }
