@@ -25,6 +25,35 @@ DumpDiff3("AA ZZ 00 M 99",
 	  "AA a b c ZZ new 00 a a M 99",
 	  "AA a d c ZZ 11 M z z 99");
 
+/*
+AA
+<<<<<<< a
+a
+b
+c
+||||||| o
+=======
+a
+d
+c
+>>>>>>> b
+ZZ
+<<<<<<< a
+new
+00
+a
+a
+||||||| o
+00
+=======
+11
+>>>>>>> b
+M
+z
+z
+99
+*/
+
 DumpDiff3("",
 	  "A B C",
 	  "A D C");
