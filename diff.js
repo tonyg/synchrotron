@@ -285,11 +285,6 @@ Diff = {
 
         var m1 = Diff.diff_indices(o, a);
         var m2 = Diff.diff_indices(o, b);
-	print("o: " + uneval(o));
-	print("a: " + uneval(a));
-	print("b: " + uneval(b));
-	print("m1: " + uneval(m1));
-	print("m2: " + uneval(m2));
 
         var hunks = [];
         function addHunk(h, side) {
@@ -298,7 +293,6 @@ Diff = {
         for (i = 0; i < m1.length; i++) { addHunk(m1[i], 0); }
         for (i = 0; i < m2.length; i++) { addHunk(m2[i], 2); }
         hunks.sort();
-	print("hunks: " + uneval(hunks));
 
         var result = [];
         var commonOffset = 0;
@@ -329,9 +323,7 @@ Diff = {
                 }
             } else {
                 var regions = [a.length, -1, regionLhs, regionRhs, b.length, -1];
-		print("-");
                 for (i = firstHunkIndex; i <= hunkIndex; i++) {
-		    print("regions "+i+": " + uneval(regions));
                     var side = hunks[i][1];
                     var lhs = hunks[i][3];
                     var rhs = lhs + hunks[i][4];
@@ -339,7 +331,6 @@ Diff = {
                     regions[ri] = Math.min(lhs, regions[ri]);
                     regions[ri+1] = Math.max(rhs, regions[ri+1]);
                 }
-		print("regions X: " + uneval(regions));
                 result.push([-1,
                              regions[0], regions[1] - regions[0],
                              regions[2], regions[3] - regions[2],
