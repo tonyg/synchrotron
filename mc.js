@@ -624,9 +624,12 @@ Mc.Checkout = function(repo, blobIdOrTag) {
 
     var tagInfo = repo.lookupTag(blobIdOrTag);
     this.activeBranch = (tagInfo && !tagInfo.isRemote) ? tagInfo.bookmarkName : null;
+    this.forceCheckout(blobIdOrTag);
+};
 
-    var resolved = repo.resolve(blobIdOrTag);
-    var index = repo.lookup(resolved, false);
+Mc.Checkout.prototype.forceCheckout = function (blobIdOrTag) {
+    var resolved = this.repo.resolve(blobIdOrTag);
+    var index = this.repo.lookup(resolved, false);
     if (index) {
 	this.inodes = index.inodes; // inodeId -> blobId
 	this.names = index.names; // name -> inodeId
@@ -636,7 +639,6 @@ Mc.Checkout = function(repo, blobIdOrTag) {
 	this.names = {};
 	this.directParent = undefined;
     }
-
     this.resetTemporaryState();
 };
 
@@ -786,7 +788,17 @@ Mc.Checkout.prototype.merge = function(otherBlobIdOrTag) {
     if (!b2) {
 	throw {message: "Could not resolve revision name", blobIdOrTag: otherBlobIdOrTag};
     }
+
     var b0 = repo.leastCommonAncestor(b1, b2);
+    if (b0 == b1) {
+	// Fast-forward to b2.
+	this.forceCheckout(b2);
+	return false;
+    }
+    if (b0 == b2) {
+	// Fast-forward to b1, but we're already *at* b1.
+	return false;
+    }
 
     var v1 = repo.lookupUnsafe(b1, false);
     var v2 = repo.lookupUnsafe(b2, false);
@@ -878,6 +890,7 @@ Mc.Checkout.prototype.merge = function(otherBlobIdOrTag) {
     this.conflicts = haveConflicts ? conflicts : null;
     this.additionalParent = b2;
     this.anyDirty = true;
+    return true;
 };
 
 Mc.Checkout.prototype.commit = function(metadata) {

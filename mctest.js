@@ -168,9 +168,12 @@ Mc.Tests = {
 // 	fs.writeFile("File B", {"text": ["Conflicting"]});
 // 	fs.commit({summary: "Interfering commit"});
 
-        fs.merge("origin/master");
-	print(pp({postMergePreCommit: fs}));
-        fs.commit({summary: "Fast-forward to remote's master"});
+	print("Merging with origin/master");
+        print("... returned " + uneval(fs.merge("origin/master")));
+	assert(!fs.isDirty(),
+	       "The checkout should not be dirty, as it should be a fast-forward.");
+	assert(fs.directParent == repo.resolve("origin/master"),
+	       "Should have fast-forwarded to rev of origin/master");
         print("================================================================= Rt2");
         print(pp({fs: fs}));
         print();
