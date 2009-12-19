@@ -318,23 +318,44 @@ Diff = {
 
             copyCommon(regionLhs);
             if (firstHunkIndex == hunkIndex) {
+		// The "overlap" was only one hunk long, meaning that
+		// there's no conflict here. Either a and o were the
+		// same, or b and o were the same.
                 if (hunk[4] > 0) {
                     result.push([hunk[1], hunk[3], hunk[4]]);
                 }
             } else {
-                var regions = [a.length, -1, regionLhs, regionRhs, b.length, -1];
+		// A proper conflict. Determine the extents of the
+		// regions involved from a, o and b. Effectively merge
+		// all the hunks on the left into one giant hunk, and
+		// do the same for the right; then, correct for skew
+		// in the regions of o that each side changed, and
+		// report appropriate spans for the three sides.
+		var regions = {
+		    0: [a.length, -1, o.length, -1],
+		    2: [b.length, -1, o.length, -1]
+		};
                 for (i = firstHunkIndex; i <= hunkIndex; i++) {
-                    var side = hunks[i][1];
-                    var lhs = hunks[i][3];
-                    var rhs = lhs + hunks[i][4];
-                    var ri = side * 2;
-                    regions[ri] = Math.min(lhs, regions[ri]);
-                    regions[ri+1] = Math.max(rhs, regions[ri+1]);
+		    hunk = hunks[i];
+                    var side = hunk[1];
+		    var r = regions[side];
+		    var oLhs = hunk[0];
+		    var oRhs = oLhs + hunk[2];
+                    var abLhs = hunk[3];
+                    var abRhs = abLhs + hunk[4];
+		    r[0] = Math.min(abLhs, r[0]);
+		    r[1] = Math.max(abRhs, r[1]);
+		    r[2] = Math.min(oLhs, r[2]);
+		    r[3] = Math.max(oRhs, r[3]);
                 }
+		var aLhs = regions[0][0] + (regionLhs - regions[0][2]);
+		var aRhs = regions[0][1] + (regionRhs - regions[0][3]);
+		var bLhs = regions[2][0] + (regionLhs - regions[2][2]);
+		var bRhs = regions[2][1] + (regionRhs - regions[2][3]);
                 result.push([-1,
-                             regions[0], regions[1] - regions[0],
-                             regions[2], regions[3] - regions[2],
-                             regions[4], regions[5] - regions[4]]);
+			     aLhs,      aRhs      - aLhs,
+			     regionLhs, regionRhs - regionLhs,
+			     bLhs,      bRhs      - bLhs]);
             }
             commonOffset = regionRhs;
         }
