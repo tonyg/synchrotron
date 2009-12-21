@@ -7,7 +7,7 @@ function ModuleDefinition(name, exports, imports, bodyText) {
     this.localName = ModuleDefinition.localNameFor(this.name);
     this.gensymCounter = 0;
 
-    this.factory = eval(this.constructFactory());
+    this.factory = eval('(' + this.constructFactory() + ')');
 }
 
 ModuleDefinition.fromJsonObject = function (obj) {
