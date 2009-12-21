@@ -6,6 +6,7 @@
     "exports": [{"Util": "Mc.Util"},
 		{"ObjectTypes": "Mc.ObjectTypes"},
 		{"TypeDirectory": "Mc.TypeDirectory"},
+		{"validInstance": "Mc.validInstance"},
 		{"lookupType": "Mc.lookupType"},
 		{"typeMethod": "Mc.typeMethod"},
 		{"SimpleObjectTypeTable": "Mc.SimpleObjectTypeTable"},

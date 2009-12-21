@@ -3,6 +3,7 @@
     "imports": ["com.tiddlywiki.FileSystem",
 		"org.JSON",
 		"net.lshift.synchrotron.Mc"],
-    "exports": ["saveImage",
+    "exports": ["repo", "checkout",
+		"saveImage",
 		"saveImageAs"]
 }

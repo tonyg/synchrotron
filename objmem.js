@@ -5,6 +5,7 @@ if (__$_exported_repo.repoId) {
     repo.tags = __$_exported_repo.tags;
     repo.remotes = __$_exported_repo.remotes;
 }
+var checkout = new Mc.Checkout(repo);
 
 var moduleDefinitionTypeTable = Mc.typeTableFun(
     {
@@ -18,12 +19,6 @@ Mc.TypeDirectory["moduleDefinition"] = {
 		exports: [],
 		imports: [],
 		bodyText: ""};
-    },
-    pickle: function (instance) {
-	return instance.toJSON();
-    },
-    unpickle: function (repo, blobId, instanceJson) {
-	return ModuleDefinition.fromJsonObject(instanceJson);
     },
     diff: function (v0, v1) {
 	return Mc.ObjectTypes.simpleObject.diff(v0, v1, moduleDefinitionTypeTable);
@@ -41,9 +36,9 @@ if (__$_new_instances.length) {
 	var instance = __$_new_instances[i];
 	var objectType = instance.objectType;
 	delete instance.objectType;
-	var t = Mc.lookupType(objectType);
-	repo.store(Mc.typeMethod(t, "unpickle")(repo, null, instance), objectType, null, null);
+	checkout.writeFile(instance.name, instance, objectType);
     }
+    checkout.commit({summary: "Bootstrapping new instances"});
 }
 
 function getLocalPath(originalUri)
@@ -123,7 +118,7 @@ function getDirName() {
 }
 
 function saveImage() {
-    saveImageAs(getLocalPath());
+    return saveImageAs(getLocalPath());
 }
 
 function splitAtMarker(what, marker) {
@@ -135,28 +130,59 @@ function splitAtMarker(what, marker) {
     return [prefix + marker + "START", "// " + marker + "STOP\n" + suffix];
 }
 
+function forceFull(repo, blobId) {
+    var entry = repo.blobs[Mc.Util.blobIdKey(blobId)];
+    if (entry && entry.diff) {
+	var t = Mc.lookupType(Mc.Util.blobIdType(blobId));
+	var patcher = Mc.typeMethod(t, "patch");
+	entry.full =
+	    JSON.stringify(patcher(Mc.validInstance(t, repo.lookupUnsafe(entry.directParent)),
+				   JSON.parse(entry.diff)));
+	delete(entry.diff);
+    }
+};
+
 function saveImageAs(path) {
     if (path.indexOf('/') == -1) {
 	path = getDirName() + '/' + path;
     }
 
     var originalContent = FileSystem.loadFile(getLocalPath());
+    if (!originalContent) {
+	return false;
+    }
 
     var content = originalContent;
     var accumulator = [];
-    function spliceMarker(marker, value) {
+    function spliceMarker(marker, value, noStringify) {
 	marker = '__$__' + marker + '__$__';
 	var parts = splitAtMarker(content, marker);
 	accumulator.push(parts[0]);
-	var j = JSON.stringify(value, null, 2);
+	var j = noStringify ? value : '('+JSON.stringify(value, null, 2)+')';
 	j = j.replace('</script>', '</scr"+"ipt>', 'g'); // TODO: case-insensitive
-	accumulator.push('('+j+')');
+	accumulator.push(j);
 	content = parts[1];
     }
 
+    var exported = repo.exportRevisions();
+    checkout.forEachFile(function (name, inodeId) {
+			     if (inodeId.indexOf('moduleDefinition:') == 0) {
+				 forceFull(repo, inodeId);
+			     }
+			 });
+    forceFull(repo, checkout.directParent);
+
     spliceMarker('exported_repo', repo.exportRevisions());
     spliceMarker('new_instances', []);
+    spliceMarker('boot_script',
+		 checkout.readFile("net.lshift.synchrotron.boot_old").instance.bodyText,
+		 true);
     accumulator.push(content);
     content = accumulator.join('\n');
-    FileSystem.saveFile(path, content);
+
+    if (!FileSystem.saveFile(path, content)) {
+	return false;
+    }
+
+    return true;
 }

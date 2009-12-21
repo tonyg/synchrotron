@@ -783,7 +783,8 @@ Mc.Checkout.prototype.fileExists = function(fileName) {
 
 Mc.Checkout.prototype.forEachFile = function(f) {
     for (var name in this.names) {
-	f(name);
+	var inodeId = this.names[name];
+	f(name, inodeId, inodeId in this.dirtyInodes);
     }
 };
 

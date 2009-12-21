@@ -65,8 +65,8 @@ ModuleDefinition.prototype.constructFactory = function () {
 
 	importBindings.push([unambiguousAlias,
 			     namespaceName + '.lookupModule("' +
-			       $elf.name + '", "' +
-			       importModuleName + '")']);
+			       importModuleName + '", "' +
+			       $elf.name + '")']);
 
 	if (importSpec.alias) {
 	    importBindings.push([(typeof(importSpec.alias) === 'string')
@@ -139,7 +139,7 @@ ModuleNamespace.prototype.registerModule = function (name, exports) {
     this.modules[name] = exports;
 };
 
-ModuleNamespace.prototype.lookupModule = function (importingModuleName, name) {
+ModuleNamespace.prototype.lookupModule = function (name, importingModuleName) {
     var result = this.modules[name];
     if (typeof(result) === 'undefined') {
 	throw {message: "Unknown module '" + name + "' imported from '" + importingModuleName + "'",
@@ -193,5 +193,5 @@ ModuleDefinitionDirectory.prototype.instantiateModule = function (goalName) {
     }
 
     instantiate(goalName);
-    return ns.lookupModule("(null)", goalName);
+    return ns;
 };

@@ -1,4 +1,5 @@
 var __$_module_definitions = null;
+var __$_module_ns = null;
 (function () {
      try {
 	 var mdd, md;
@@ -28,7 +29,7 @@ var __$_module_definitions = null;
 			    });
 
 	 __$_module_definitions = defs;
-	 defs.instantiateModule(__$_goal);
+	 __$_module_ns = defs.instantiateModule(__$_goal);
      } catch (e) {
 	 alert(uneval(e));
      }
