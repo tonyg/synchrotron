@@ -4,6 +4,12 @@ if (__$_exported_repo.repoId) {
     repo.blobs = __$_exported_repo.blobs;
     repo.tags = __$_exported_repo.tags;
     repo.remotes = __$_exported_repo.remotes;
+    function cleanBlobs() {
+	for (var blobId in repo.blobs) {
+	    delete repo.blobs[blobId]._boot_full;
+	}
+    }
+    cleanBlobs();
 }
 var checkout = new Mc.Checkout(repo);
 
@@ -135,10 +141,9 @@ function forceFull(repo, blobId) {
     if (entry && entry.diff) {
 	var t = Mc.lookupType(Mc.Util.blobIdType(blobId));
 	var patcher = Mc.typeMethod(t, "patch");
-	entry.full =
+	entry._boot_full =
 	    JSON.stringify(patcher(Mc.validInstance(t, repo.lookupUnsafe(entry.directParent)),
 				   JSON.parse(entry.diff)));
-	delete(entry.diff);
     }
 };
 

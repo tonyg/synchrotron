@@ -6,8 +6,8 @@ var __$_module_ns = null;
 
 	 var r = __$_exported_repo;
 	 function lookup(blobId) {
-	     alert(uneval({blobId: blobId, blob: r.blobs[blobId]}));
-	     return eval('(' + r.blobs[blobId].full + ')');
+	     var blob = r.blobs[blobId];
+	     return eval('(' + (blob._boot_full || blob.full) + ')');
 	 }
 
 	 var index = lookup(r.tags[r.repoId + "/master"].blobId.substring(6));
@@ -21,7 +21,6 @@ var __$_module_ns = null;
 	 var defs = new mdd();
 	 for (var name in index.names) {
 	     var blobId = index.inodes[index.names[name]];
-	     alert(uneval([name, blobId]));
 	     if (blobId.indexOf("moduleDefinition:") == 0) {
 		 var modDef = md.fromJsonObject(lookup(blobId.substring(17)));
 		 defs.registerModuleDefinition(modDef);
