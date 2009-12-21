@@ -171,8 +171,9 @@ function saveImageAs(path) {
 
     var exported = repo.exportRevisions();
     checkout.forEachFile(function (name, inodeId) {
-			     if (inodeId.indexOf('moduleDefinition:') == 0) {
-				 forceFull(repo, inodeId);
+			     var blobId = checkout.resolveInode(inodeId).blobId;
+			     if (blobId.indexOf('moduleDefinition:') == 0) {
+				 forceFull(repo, blobId);
 			     }
 			 });
     forceFull(repo, checkout.directParent);
