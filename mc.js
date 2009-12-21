@@ -99,6 +99,26 @@ Mc.Util = (function()
         return temp;
     }
 
+    function scalarsEqual(v0, v1) {
+	if (v0 === v1) return true;
+
+	if ((typeof v0 != 'string') &&
+	    (typeof v1 != 'string') &&
+	    (typeof v0.length === 'number' && !(v0.propertyIsEnumerable('length'))) &&
+	    (typeof v1.length === 'number' && !(v1.propertyIsEnumerable('length'))) &&
+	    (v0.length == v1.length))
+	{
+	    for (var i = 0; i < v0.length; i++) {
+		if (!scalarsEqual(v0[i], v1[i])) {
+		    return false;
+		}
+	    }
+	    return true;
+	}
+
+	return false;
+    }
+
     function subclassResponsibility(methodName) {
 	throw {message: "Subclass responsibility",
 	       methodName: methodName};
@@ -128,6 +148,7 @@ Mc.Util = (function()
 	dict_to_set_list: dict_to_set_list,
 	dict_isempty: dict_isempty,
 	deepCopy: deepCopy,
+	scalarsEqual: scalarsEqual,
 	subclassResponsibility: subclassResponsibility,
 	blobIdType: blobIdType,
 	blobIdKey: blobIdKey
@@ -189,7 +210,7 @@ Mc.ObjectTypes = {
     simpleScalar: {
 	emptyInstance: function () { return undefined; },
 	diff: function (v0, v1) {
-	    if (v0 == v1) return null;
+	    if (Mc.Util.scalarsEqual(v0, v1)) return null;
 	    return {replacement: v1};
 	},
 	patch: function (v0, p) {
