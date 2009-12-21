@@ -19,6 +19,12 @@ Mc.TypeDirectory["moduleDefinition"] = {
 		imports: [],
 		bodyText: ""};
     },
+    pickle: function (instance) {
+	return instance.toJSON();
+    },
+    unpickle: function (repo, blobId, instanceJson) {
+	return ModuleDefinition.fromJsonObject(instanceJson);
+    },
     diff: function (v0, v1) {
 	return Mc.ObjectTypes.simpleObject.diff(v0, v1, moduleDefinitionTypeTable);
     },
@@ -30,16 +36,13 @@ Mc.TypeDirectory["moduleDefinition"] = {
     }
 };
 
-    this.exports = exports;
-    this.imports = imports;
-    this.bodyText = bodyText;
-
 if (__$_new_instances.length) {
     for (var i = 0; i < __$_new_instances.length; i++) {
 	var instance = __$_new_instances[i];
 	var objectType = instance.objectType;
 	delete instance.objectType;
-	repo.store(instance, objectType, null, null);
+	var t = Mc.lookupType(objectType);
+	repo.store(Mc.typeMethod(t, "unpickle")(repo, null, instance), objectType, null, null);
     }
 }
 

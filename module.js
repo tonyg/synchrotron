@@ -22,6 +22,13 @@ ModuleDefinition.localNameFor = function (name) {
     return parts[parts.length - 1];
 };
 
+ModuleDefinition.prototype.toJSON = function (key) {
+    return {name: this.name,
+	    exports: this.exports,
+	    imports: this.imports,
+	    bodyText: this.bodyText};
+};
+
 ModuleDefinition.prototype.gensym = function (distinguisher) {
     var counter = this.gensymCounter;
     this.gensymCounter++;

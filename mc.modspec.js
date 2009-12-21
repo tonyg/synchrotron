@@ -6,6 +6,8 @@
     "exports": [{"Util": "Mc.Util"},
 		{"ObjectTypes": "Mc.ObjectTypes"},
 		{"TypeDirectory": "Mc.TypeDirectory"},
+		{"lookupType": "Mc.lookupType"},
+		{"typeMethod": "Mc.typeMethod"},
 		{"SimpleObjectTypeTable": "Mc.SimpleObjectTypeTable"},
 		{"typeTableFun": "Mc.typeTableFun"},
 		{"Repository": "Mc.Repository"},
