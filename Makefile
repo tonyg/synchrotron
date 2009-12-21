@@ -6,7 +6,7 @@ INDEX_BOOTMOD=net.lshift.synchrotron.demo
 all: index.html
 
 clean:
-	rm -f index.html
+	rm -f index.html testIndex-*.html
 
 index.html: bootimage.py $(INDEX_MODSOURCES) $(INDEX_MODSPECS)
 	./bootimage.py $(INDEX_BOOTMOD) $(INDEX_MODFILES) > $@
