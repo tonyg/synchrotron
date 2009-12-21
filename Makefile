@@ -1,4 +1,4 @@
-INDEX_MODFILES=demomod io jquery-1.3.2.min module boot sha1
+INDEX_MODFILES=demomod io jquery-1.3.2.min module boot sha1 objmem
 INDEX_MODSOURCES=$(patsubst %,%.js,$(INDEX_MODFILES))
 INDEX_MODSPECS=$(patsubst %,%.modspec.js,$(INDEX_MODFILES))
 INDEX_BOOTMOD=net.lshift.synchrotron.demo
