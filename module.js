@@ -10,6 +10,13 @@ function ModuleDefinition(name, exports, imports, bodyText) {
     this.factory = eval(this.constructFactory());
 }
 
+ModuleDefinition.fromJsonObject = function (obj) {
+    return new ModuleDefinition(obj.name,
+				obj.exports || [],
+				obj.imports || [],
+				obj.bodyText || "");
+};
+
 ModuleDefinition.localNameFor = function (name) {
     var parts = name.split('.');
     return parts[parts.length - 1];
@@ -23,26 +30,35 @@ ModuleDefinition.prototype.gensym = function (distinguisher) {
 
 ModuleDefinition.prototype.importedModuleNames = function () {
     var result = [];
-    for (var name in this.imports) { result.push(name); }
+    for (var i = 0; i < this.imports.length; i++) {
+	if (typeof(this.imports[i]) === 'string') {
+	    result.push(this.imports[i]);
+	} else {
+	    for (var name in this.imports[i]) {
+		result.push(name);
+	    }
+	}
+    }
     return result;
 };
 
 ModuleDefinition.prototype.constructFactory = function () {
-    var namespaceName = this.gensym('ns');
+    var $elf = this;
+
+    var namespaceName = $elf.gensym('ns');
     var moduleAliases = {};
     var importBindings = [];
     var exportCodeFragments = [];
     var i, publicName, privateName;
 
-    for (var importModuleName in this.imports) {
-	var importSpec = this.imports[importModuleName];
+    function doImport(importModuleName, importSpec) {
 	var localAlias = ModuleDefinition.localNameFor(importModuleName);
-	var unambiguousAlias = this.gensym('mod_' + localAlias);
+	var unambiguousAlias = $elf.gensym('mod_' + localAlias);
 	moduleAliases[importModuleName] = unambiguousAlias;
 
 	importBindings.push([unambiguousAlias,
 			     namespaceName + '.lookupModule("' +
-			       this.name + '", "' +
+			       $elf.name + '", "' +
 			       importModuleName + '")']);
 
 	if (importSpec.alias) {
@@ -53,7 +69,7 @@ ModuleDefinition.prototype.constructFactory = function () {
 	}
 
 	if (importSpec.symbols) {
-	    for (i = 0; i < importSpec.symbols; i++) {
+	    for (i = 0; i < importSpec.symbols.length; i++) {
 		var importSymbol = importSpec.symbols[i];
 		if (typeof(importSymbol) === 'string') {
 		    importBindings.push([importSymbol, unambiguousAlias + '.' + importSymbol]);
@@ -67,8 +83,20 @@ ModuleDefinition.prototype.constructFactory = function () {
 	}
     }
 
-    for (i = 0; i < this.exports.length; i++) {
-	var exportSymbol = this.exports[i];
+    for (var importIndex = 0; importIndex < $elf.imports.length; importIndex++) {
+	var importModuleName = $elf.imports[importIndex];
+	if (typeof(importModuleName) === 'string') {
+	    doImport(importModuleName, {alias: true});
+	} else {
+	    var importSpecs = importModuleName;
+	    for (importModuleName in importSpecs) {
+		doImport(importModuleName, importSpecs[importModuleName]);
+	    }
+	}
+    }
+
+    for (i = 0; i < $elf.exports.length; i++) {
+	var exportSymbol = $elf.exports[i];
 	if (typeof(exportSymbol) === 'string') {
 	    exportCodeFragments.push(exportSymbol + ': (' + exportSymbol + ')');
 	} else {
@@ -80,12 +108,12 @@ ModuleDefinition.prototype.constructFactory = function () {
     }
 
     for (i = 0; i < importBindings.length; i++) {
-	importBindings[i] = '  ' + importBindings[i][0] + ' = ' + importBindings[i][1] + ';\n';
+	importBindings[i] = '  var ' + importBindings[i][0] + ' = ' + importBindings[i][1] + ';\n';
     }
 
     return 'function (' + namespaceName + ') {\n' +
 	importBindings.join('') + '\n' +
-	this.bodyText +
+	$elf.bodyText +
 	'\n  return {\n    ' +
 	exportCodeFragments.join(',    \n') +
 	'\n  }\n' +
@@ -153,7 +181,7 @@ ModuleDefinitionDirectory.prototype.instantiateModule = function (goalName) {
 	    instantiate(importedModules[i]);
 	}
 	//print("Instantiating " + modName + "...");
-	print(def.constructFactory());
+	//print(def.constructFactory());
 	ns.registerModule(modName, def.factory(ns));
     }
 
