@@ -503,6 +503,11 @@ Mc.Repository.prototype.store = function(instance, // a picklable object
 {
     var t = Mc.lookupType(objectType);
     var entry = {directParent: directParent, additionalParent: additionalParent};
+    // TODO: we currently index by the sha1 of the instance, thus
+    // ignoring potentially identical content with different
+    // directParent or additionalParent. This needs to stop; perhaps
+    // by storing the instance (or diff) as a blob first, and then
+    // storing the entry as an additional blob.
 
     var jsonInstance = Mc.typeMethod(t, "pickle")(instance);
     var jsonText = JSON.stringify(jsonInstance);
