@@ -18,7 +18,7 @@ ModuleDefinition.localNameFor = function (name) {
 ModuleDefinition.prototype.gensym = function (distinguisher) {
     var counter = this.gensymCounter;
     this.gensymCounter++;
-    return this.localName + '_' + (distinguisher ? distinguisher + '_' : '') + counter;
+    return '__$_' + this.localName + '_' + (distinguisher ? distinguisher + '_' : '') + counter;
 };
 
 ModuleDefinition.prototype.importedModuleNames = function () {
@@ -36,7 +36,7 @@ ModuleDefinition.prototype.constructFactory = function () {
 
     for (var importModuleName in this.imports) {
 	var importSpec = this.imports[importModuleName];
-	var localAlias = ModuleDefinition.localModuleName(importModuleName);
+	var localAlias = ModuleDefinition.localNameFor(importModuleName);
 	var unambiguousAlias = this.gensym('mod_' + localAlias);
 	moduleAliases[importModuleName] = unambiguousAlias;
 
@@ -80,14 +80,15 @@ ModuleDefinition.prototype.constructFactory = function () {
     }
 
     for (i = 0; i < importBindings.length; i++) {
-	importBindings[i] = importBindings[i][0] + ' = ' + importBindings[i][1] + ';\n';
+	importBindings[i] = '  ' + importBindings[i][0] + ' = ' + importBindings[i][1] + ';\n';
     }
 
     return 'function (' + namespaceName + ') {\n' +
-	importBindings.join('') +
+	importBindings.join('') + '\n' +
 	this.bodyText +
-	'return {\n' +
-	exportCodeFragments.join(',\n') +
+	'\n  return {\n    ' +
+	exportCodeFragments.join(',    \n') +
+	'\n  }\n' +
 	'}';
 };
 
@@ -131,16 +132,31 @@ ModuleDefinitionDirectory.prototype.registerModuleDefinition = function (definit
     this.definitions[definition.name] = definition;
 };
 
+ModuleDefinitionDirectory.prototype.lookupModuleDefinition = function (name) {
+    return this.definitions[name];
+};
+
 ModuleDefinitionDirectory.prototype.instantiateModule = function (goalName) {
+    var $elf = this;
     var ns = new ModuleNamespace();
 
     function instantiate(modName) {
-	if (ns.containsModule[modName]) return;
+	if (ns.containsModule(modName)) return;
 	ns.beginModuleDefinition(modName);
-	var def = this.definitions[modName];
+	var def = $elf.definitions[modName];
 	if (!def) {
-	    throw 
-	var importedModules = mod.importedModuleNames();
+	    throw {message: "Reference to unknown module-definition '" + modName + "'",
+		   name: modName};
+	}
+	var importedModules = def.importedModuleNames();
 	for (var i = 0; i < importedModules.length; i++) {
-	    
+	    instantiate(importedModules[i]);
+	}
+	//print("Instantiating " + modName + "...");
+	print(def.constructFactory());
+	ns.registerModule(modName, def.factory(ns));
+    }
+
+    instantiate(goalName);
+    return ns.lookupModule("(null)", goalName);
 };
