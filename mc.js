@@ -224,6 +224,20 @@ Mc.ObjectTypes = {
         }
     },
 
+    paragraphString: {
+	emptyInstance: function () { return ""; },
+	diff: function (v0, v1) {
+	    return Mc.ObjectTypes.simpleText.diff(v0.split('\n'), v1.split('\n'));
+	},
+	patch: function (v0, p) {
+	    if (p === null) return v0;
+	    return Mc.ObjectTypes.simpleText.patch(v0.split('\n'), p).join('\n');
+	},
+	merge: function(v1, v0, v2) {
+	    return Mc.ObjectTypes.simpleText.merge(v1.split('\n'), v0.split('\n'), v2.split('\n'));
+	}
+    },
+
     simpleObject: {
 	emptyInstance: function () { return {}; },
 	diff: function (v0, v1, typeTableFun) {

@@ -1,3 +1,48 @@
+var repo = new Mc.Repository();
+if (__$_exported_repo.repoId) {
+    repo.repoId = __$_exported_repo.repoId;
+    repo.blobs = __$_exported_repo.blobs;
+    repo.tags = __$_exported_repo.tags;
+    repo.remotes = __$_exported_repo.remotes;
+}
+
+var moduleDefinitionTypeTable = Mc.typeTableFun(
+    {
+	"bodyText": Mc.ObjectTypes.paragraphString
+    }
+);
+
+Mc.TypeDirectory["moduleDefinition"] = {
+    emptyInstance: function () {
+	return {name: "",
+		exports: [],
+		imports: [],
+		bodyText: ""};
+    },
+    diff: function (v0, v1) {
+	return Mc.ObjectTypes.simpleObject.diff(v0, v1, moduleDefinitionTypeTable);
+    },
+    patch: function (v0, p) {
+	return Mc.ObjectTypes.simpleObject.patch(v0, p, moduleDefinitionTypeTable);
+    },
+    merge: function (v1, v0, v2) {
+	return Mc.ObjectTypes.simpleObject.merge(v1, v0, v2, moduleDefinitionTypeTable);
+    }
+};
+
+    this.exports = exports;
+    this.imports = imports;
+    this.bodyText = bodyText;
+
+if (__$_new_instances.length) {
+    for (var i = 0; i < __$_new_instances.length; i++) {
+	var instance = __$_new_instances[i];
+	var objectType = instance.objectType;
+	delete instance.objectType;
+	repo.store(instance, objectType, null, null);
+    }
+}
+
 function getLocalPath(originalUri)
 {
     // This function is based on getLocalPath from Saving.js, extracted
@@ -68,4 +113,47 @@ function getLocalPath(originalUri)
     return localPath;
 }
 
-alert(getLocalPath());
+function getDirName() {
+    var dirName = getLocalPath().split('/');
+    dirName.pop();
+    return dirName.join('/');
+}
+
+function saveImage() {
+    saveImageAs(getLocalPath());
+}
+
+function splitAtMarker(what, marker) {
+    var pos = what.indexOf(marker + "START\n");
+    var prefix = what.substring(0, pos);
+    what = what.substring(pos + marker.length + 6);
+    pos = what.indexOf(marker + "STOP\n");
+    var suffix = what.substring(pos + marker.length + 5);
+    return [prefix + marker + "START", "// " + marker + "STOP\n" + suffix];
+}
+
+function saveImageAs(path) {
+    if (path.indexOf('/') == -1) {
+	path = getDirName() + '/' + path;
+    }
+
+    var originalContent = FileSystem.loadFile(getLocalPath());
+
+    var content = originalContent;
+    var accumulator = [];
+    function spliceMarker(marker, value) {
+	marker = '__$__' + marker + '__$__';
+	var parts = splitAtMarker(content, marker);
+	accumulator.push(parts[0]);
+	var j = JSON.stringify(value, null, 2);
+	j = j.replace('</script>', '</scr"+"ipt>', 'g'); // TODO: case-insensitive
+	accumulator.push('('+j+')');
+	content = parts[1];
+    }
+
+    spliceMarker('exported_repo', repo.exportRevisions());
+    spliceMarker('new_instances', []);
+    accumulator.push(content);
+    content = accumulator.join('\n');
+    FileSystem.saveFile(path, content);
+}

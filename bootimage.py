@@ -21,18 +21,20 @@ def loadModspec(name):
     mods[metadata["name"]] = metadata
 
     d = dict(metadata)
-    d["bodyText"] = d["bodyText"] \
-        .replace('</script>', '</scr"+"ipt>') # skode. Should deal with this case-insensitively
+    d["bodyText"] = d["bodyText"]
     d["objectType"] = "moduleDefinition"
     defs.append(d)
 
 def split(what, marker):
-    (prefix, suffix) = what.split(marker, 1)
-    return (prefix + marker, suffix)
+    (prefix, suffix) = what.split(marker + "START", 1)
+    (middle, suffix) = what.split(marker + "STOP", 1)
+    return (prefix + marker + "START", "// " + marker + "STOP\n" + suffix)
 
 def replaceMarker(marker, value):
     global template
     (prefix, template) = split(template, marker)
+    value = value \
+        .replace('</script>', '</scr"+"ipt>') # skode. Should deal with this case-insensitively
     print prefix + '\n' + value
 
 goal = sys.argv[1]

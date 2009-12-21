@@ -1,5 +1,8 @@
 {
     "name": "net.lshift.synchrotron.ObjectMemory",
-    "imports": ["com.tiddlywiki.FileSystem"],
-    "exports": []
+    "imports": ["com.tiddlywiki.FileSystem",
+		"org.JSON",
+		"net.lshift.synchrotron.Mc"],
+    "exports": ["saveImage",
+		"saveImageAs"]
 }
