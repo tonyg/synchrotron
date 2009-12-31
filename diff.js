@@ -312,7 +312,7 @@ Diff = {
                 var maybeOverlapping = hunks[hunkIndex + 1];
                 var maybeLhs = maybeOverlapping[0];
                 if (maybeLhs > regionRhs) break;
-                regionRhs = maybeLhs + maybeOverlapping[2];
+                regionRhs = Math.max(regionRhs, maybeLhs + maybeOverlapping[2]);
                 hunkIndex++;
             }
 
