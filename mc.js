@@ -522,6 +522,12 @@ Mc.Repository.prototype.store = function(instance, // a picklable object
     if (directParent) {
 	var differ = Mc.typeMethod(t, "diff");
 	var diffJson = differ(Mc.validInstance(t, this.lookupUnsafe(directParent)), instance);
+	if (diffJson === null) {
+	    // No changes to the data? Then claim we're identical to
+	    // our parent. SEE ALSO THE TODO IMMEDIATELY ABOVE IN THIS
+	    // FUNCTION.
+	    return objectType + ":" + Mc.Util.blobIdKey(directParent);
+	}
 	entry.diff = JSON.stringify(diffJson);
     } else {
 	entry.full = jsonText;
