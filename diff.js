@@ -21,7 +21,7 @@
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-Diff = {
+var Diff = {
     longest_common_subsequence: function(file1, file2) {
         /* Text diff algorithm following Hunt and McIlroy 1976.
          * J. W. Hunt and M. D. McIlroy, An algorithm for differential file

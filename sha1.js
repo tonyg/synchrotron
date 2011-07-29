@@ -228,4 +228,4 @@ return {
 };
 };
 
-SHA1 = make_SHA1();
+var SHA1 = make_SHA1();

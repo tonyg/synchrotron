@@ -21,7 +21,7 @@
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-Graph = {
+var Graph = {
     _foreach: function(arr, f) {
         for (var i = 0; i < arr.length; i++) {
             f(arr[i]);
