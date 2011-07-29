@@ -188,6 +188,10 @@ ModuleDefinitionDirectory.prototype.registerModuleDefinition = function (definit
     this.definitions[definition.name] = definition;
 };
 
+ModuleDefinitionDirectory.prototype.registerJsonModuleDefinition = function (definitionJson) {
+    this.registerModuleDefinition(ModuleDefinition.fromJsonObject(definitionJson));
+};
+
 ModuleDefinitionDirectory.prototype.lookupModuleDefinition = function (name) {
     return this.definitions[name];
 };

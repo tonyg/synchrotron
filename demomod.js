@@ -17,6 +17,10 @@ function main() {
     f.bodyText = f.bodyText + "\nalert('there');";
     c.writeFile("foo", f, "moduleDefinition");
     c.commit({summary: "updated foo"});
+
+    Boot.module_namespace.definitionDirectory.registerJsonModuleDefinition(f);
+    Boot.module_namespace.instantiateModule('foo');
+
     ObjectMemory.saveImageAs(filename);
 
     $("body").append($((new Showdown.converter()).makeHtml("Done!")));
