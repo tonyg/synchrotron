@@ -40,8 +40,11 @@ try {
 	       {operation: "lcs", f1: f1, f2: f2});
     }
 
-    var f1 = "The red brown fox jumped over the rolling log".split(/ /);
-    var f2 = "The brown spotted fox leaped over the rolling log".split(/ /);
+    var str1 = "The red brown fox jumped over the rolling log";
+    var str2 = "The brown spotted fox leaped over the rolling log";
+
+    var f1 = str1.split(/ /);
+    var f2 = str2.split(/ /);
 
     assert(testRenderEqual(Diff.diff_comm(f1, f2),
 			   [{common:["The"]},
@@ -62,6 +65,17 @@ try {
 
     assertLcs('abcabba', 'cbabac', [[2,0],[3,2],[4,3],[6,4]]);
     assertLcs('cbabac', 'abcabba', [[1,1],[2,3],[3,4],[4,6]]);
+
+    assert(testRenderEqual(Diff.diff_comm(str1, str2),
+			   [{common:["T", "h", "e", " "]},
+			    {file1:["r", "e", "d", " "], file2:[]},
+			    {common:["b", "r", "o", "w", "n", " "]},
+			    {file1:[], file2:["s", "p", "o", "t", "t", "e", "d", " "]},
+			    {common:["f", "o", "x", " "]},
+			    {file1:["j", "u", "m"], file2:["l", "e", "a"]},
+			    {common:["p", "e", "d", " ", "o", "v", "e", "r", " ",
+				     "t", "h", "e", " ", "r", "o", "l", "l", "i", "n", "g", " ",
+				     "l", "o", "g"]}]));
 
 } catch (e) {
     print(JSON.stringify(e));
