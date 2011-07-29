@@ -61,7 +61,7 @@ Diff = {
             for (jX = 0; jX < file2indices.length; jX++) {
                 j = file2indices[jX];
 
-                for (s = 0; s < candidates.length; s++) {
+                for (s = r; s < candidates.length; s++) {
                     if ((candidates[s].file2index < j) &&
                         ((s == candidates.length - 1) ||
                          (candidates[s + 1].file2index > j)))
