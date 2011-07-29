@@ -127,8 +127,9 @@ ModuleDefinition.prototype.constructFactory = function () {
 	'}';
 };
 
-function ModuleNamespace() {
+function ModuleNamespace(definitionDirectory) {
     this.modules = {};
+    this.definitionDirectory = definitionDirectory;
 }
 
 ModuleNamespace.prototype.beginModuleDefinition = function (name) {
@@ -159,6 +160,26 @@ ModuleNamespace.prototype.containsModule = function (name) {
     return name in this.modules;
 };
 
+ModuleNamespace.prototype.instantiateModule = function (modName) {
+    if (this.containsModule(modName)) return;
+
+    this.beginModuleDefinition(modName);
+    var def = this.definitionDirectory.lookupModuleDefinition(modName);
+    if (!def) {
+	throw {message: "Reference to unknown module-definition '" + modName + "'",
+	       name: modName};
+    }
+    var importedModules = def.importedModuleNames();
+    for (var i = 0; i < importedModules.length; i++) {
+	this.instantiateModule(importedModules[i]);
+    }
+    //print("Instantiating " + modName + "...");
+    //print(def.constructFactory());
+    var moduleExports = def.factory(this);
+    this.registerModule(modName, moduleExports);
+    return moduleExports;
+};
+
 function ModuleDefinitionDirectory() {
     this.definitions = {};
 }
@@ -169,29 +190,4 @@ ModuleDefinitionDirectory.prototype.registerModuleDefinition = function (definit
 
 ModuleDefinitionDirectory.prototype.lookupModuleDefinition = function (name) {
     return this.definitions[name];
-};
-
-ModuleDefinitionDirectory.prototype.instantiateModule = function (goalName) {
-    var $elf = this;
-    var ns = new ModuleNamespace();
-
-    function instantiate(modName) {
-	if (ns.containsModule(modName)) return;
-	ns.beginModuleDefinition(modName);
-	var def = $elf.definitions[modName];
-	if (!def) {
-	    throw {message: "Reference to unknown module-definition '" + modName + "'",
-		   name: modName};
-	}
-	var importedModules = def.importedModuleNames();
-	for (var i = 0; i < importedModules.length; i++) {
-	    instantiate(importedModules[i]);
-	}
-	//print("Instantiating " + modName + "...");
-	//print(def.constructFactory());
-	ns.registerModule(modName, def.factory(ns));
-    }
-
-    instantiate(goalName);
-    return ns;
 };

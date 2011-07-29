@@ -1,8 +1,7 @@
-var __$_module_definitions = null;
-var __$_module_ns = null;
+var __$_module_namespace = null;
 (function () {
      try {
-	 var mdd, md;
+	 var mdd, mns, md;
 
 	 function foreachNewInstance(f) {
 	     for (var i = 0; i < __$_new_instances.length; i++) {
@@ -14,9 +13,11 @@ var __$_module_ns = null;
 				if (ni.name === 'net.lshift.synchrotron.module') {
 				    var v = eval('(function () {' + ni.bodyText +
 						 '; return [ModuleDefinitionDirectory,' +
+						 'ModuleNamespace,' +
 						 'ModuleDefinition];})()');
 				    mdd = v[0];
-				    md = v[1];
+				    mns = v[1];
+				    md = v[2];
 				}
 			    });
 
@@ -28,8 +29,8 @@ var __$_module_ns = null;
 				}
 			    });
 
-	 __$_module_definitions = defs;
-	 __$_module_ns = defs.instantiateModule(__$_goal);
+	 __$_module_namespace = new mns(defs);
+	 __$_module_namespace.instantiateModule(__$_goal);
      } catch (e) {
 	 alert(uneval(e));
      }

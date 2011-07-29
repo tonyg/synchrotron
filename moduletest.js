@@ -3,6 +3,7 @@ try {
 load("module.js");
 
 var defs = new ModuleDefinitionDirectory();
+var ns = new ModuleNamespace(defs);
 
 defs.registerModuleDefinition(
     new ModuleDefinition(
@@ -34,7 +35,7 @@ defs.registerModuleDefinition(
 
 print(defs.lookupModuleDefinition("bot").constructFactory());
 
-var b = defs.instantiateModule("bot");
+var b = ns.instantiateModule("bot");
 print(b.botval);
 
 } catch (e) {
