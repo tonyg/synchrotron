@@ -1,5 +1,8 @@
-#!/usr/bin/env python2.5
-import simplejson as json
+#!/usr/bin/env python
+try:
+    import json
+except:
+    import simplejson as json
 import sys
 
 f = file("image.boot.html")
