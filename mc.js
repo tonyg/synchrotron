@@ -334,22 +334,27 @@ Mc.ObjectTypes = {
     },
 
     basicIndex: {
-	emptyInstance: function () { return {inodes: {}, names: {}, metadata: undefined}; },
+	emptyInstance: function () { return {inodes: {}, names: {}, metadata: {}}; },
 	diff: function (v0, v1) {
 	    var result = {};
+	    var diffExists = false;
 	    var d;
 	    d = Mc.ObjectTypes.simpleObject.diff(v0.inodes, v1.inodes, Mc.RawObjectTypeTableFun);
-	    if (d) { result.inodes = d; }
+	    if (d) { result.inodes = d; diffExists = true; }
 	    d = Mc.ObjectTypes.simpleObject.diff(v0.names, v1.names, Mc.RawObjectTypeTableFun);
-	    if (d) { result.names = d; }
-	    result.metadata = v1.metadata;
+	    if (d) { result.names = d; diffExists = true; }
+	    d = Mc.ObjectTypes.simpleObject.diff(v0.metadata, v1.metadata, Mc.RawObjectTypeTableFun);
+	    if (d) { result.metadata = d; diffExists = true; }
+	    if (!diffExists) return null;
 	    return result;
 	},
 	patch: function (v0, p) {
 	    var result = Mc.Util.deepCopy(v0);
-	    result.inodes = Mc.ObjectTypes.simpleObject.patch(result.inodes, p.inodes || null);
-	    result.names = Mc.ObjectTypes.simpleObject.patch(result.names, p.names || null);
-	    result.metadata = p.metadata;
+	    if (p !== null) {
+		result.inodes = Mc.ObjectTypes.simpleObject.patch(result.inodes, p.inodes || null);
+		result.names = Mc.ObjectTypes.simpleObject.patch(result.names, p.names || null);
+		result.metadata = Mc.ObjectTypes.simpleObject.patch(result.metadata, p.metadata || null);
+	    }
 	    return result;
 	},
 	merge: function(v1, v0, v2) {
@@ -970,7 +975,7 @@ Mc.Checkout.prototype.commit = function(metadata) {
 	var commitId = repo.store({
 				      inodes: this.inodes,
 				      names: this.names,
-				      metadata: metadata
+				      metadata: metadata || ({})
 				  },
 				  "index",
 				  this.directParent,
