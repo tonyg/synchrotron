@@ -60,5 +60,37 @@ var Graph = {
         }
 
         return null; // no LCA found.
+    },
+
+    topological_sort: function (graph) {
+	var visited = {};
+	var active = {};
+	var result = [];
+
+	function visit(node) {
+	    if (node in active) {
+		throw {message: "Topological sort: cycle detected",
+		       node: node,
+		       active: active};
+	    }
+
+	    if (node in visited) return;
+	    visited[node] = true;
+
+	    active[node] = true;
+	    var targets = graph[node] || [];
+	    for (var i = 0; i < targets.length; i++) {
+		visit(targets[i]);
+	    }
+	    delete active[node];
+
+	    result.unshift(node);
+	}
+
+	for (var node in graph) {
+	    visit(node);
+	}
+
+	return result;
     }
 };
