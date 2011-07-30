@@ -197,6 +197,8 @@ Mc.Util = (function()
 // also provides read/write/merge/commit services and a cache of
 // unpickled objects.
 
+// TODO: Add a "children" operation for tracing GC of the repository.
+
 Mc.ObjectTypes = {
     Default: {
 	emptyInstance: function () { Mc.Util.subclassResponsibility("emptyInstance"); },
