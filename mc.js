@@ -553,6 +553,11 @@ Mc.Repository.prototype.lookupUnsafe = function (blobId, shouldResolve) {
 
 	var t = Mc.lookupType(Mc.Util.blobIdType(resolved));
 
+	// TODO: consider using unpickle(patch(base, diff)), and
+	// changing the meaning of patch to return a JSON object
+	// suitable for unpickling rather than an already-unpickled
+	// object.
+
 	if (entry.diff) {
 	    var patcher = Mc.typeMethod(t, "patch");
 	    this.cache[resolved] =
