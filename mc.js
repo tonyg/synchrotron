@@ -832,6 +832,29 @@ Mc.Checkout.prototype.forEachFile = function(f) {
     }
 };
 
+Mc.Checkout.prototype.forEachFileOfType = function (typeNameOrFilter, f) {
+    var typeFilter;
+    if (typeof(typeNameOrFilter) === "string") {
+	typeFilter = function (typeName) { return typeName === typeNameOrFilter; };
+    } else {
+	typeFilter = typeNameOrFilter;
+    }
+
+    for (var name in this.names) {
+	var inodeId = this.names[name];
+	var instanceLocation = this.resolveInode(inodeId);
+	var type;
+	if (instanceLocation.blobId) {
+	    type = Mc.Util.blobIdType(instanceLocation.blobId);
+	} else {
+	    type = this.newInstances[instanceLocation.instanceIndex].objectType;
+	}
+	if (typeFilter(type)) {
+	    f(name, inodeId, inodeId in this.dirtyInodes);
+	}
+    }
+};
+
 Mc.Checkout.prototype.isDirty = function() {
     return this.anyDirty;
 };
