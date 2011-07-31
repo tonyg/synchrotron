@@ -50,4 +50,8 @@ function main() {
     containerDiv.append(footerDiv);
 
     $("body").append(containerDiv);
+
+    /* TODO: Make font links be documents like style sheets are */
+    $("head").append($("<link href='http://fonts.googleapis.com/css?family=Lora&amp;v1' rel='stylesheet' type='text/css'>"));
+    $("head").append($("<link href='http://fonts.googleapis.com/css?family=Mako&amp;v1' rel='stylesheet' type='text/css'>"));
 }
