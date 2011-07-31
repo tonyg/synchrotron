@@ -1,0 +1,5 @@
+.panels.container { border: solid black 1px; }
+.panels.clear { clear: both; }
+.panels.left { float: left; }
+.panels.right { float: right; }
+.panels.bottom { clear: both; }

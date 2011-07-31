@@ -18,13 +18,16 @@ var panelsDiv = $('<div class="panels body"></div>');
 var footerDiv = $('<div class="panels bottom"></div>');
 
 function main() {
-    $("head").append($('<style type="text/css">' +
-		       '.panels.container { border: solid black 1px; }' +
-		       '.panels.clear { clear: both; }' +
-		       '.panels.left { float: left; }' +
-		       '.panels.right { float: right; }' +
-		       '.panels.bottom { clear: both; }' +
-		       '</style>'));
+    var c = ObjectMemory.checkout;
+    c.forEachFileOfType("cssStyleSheet",
+			function (name) {
+			    var sheet = c.readFile(name).instance;
+			    if (sheet.enabled) {
+				var s = $('<style type="text/css"></style>');
+				s.text(sheet.bodyText);
+				$("head").append(s);
+			    }
+			});
 
     containerDiv.append(headerDiv);
     containerDiv.append(leftDiv);

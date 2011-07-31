@@ -21,6 +21,13 @@ Mc.TypeDirectory["moduleDefinition"] =
 			    },
 			    { bodyText: Mc.ObjectTypes.paragraphString });
 
+Mc.TypeDirectory["cssStyleSheet"] =
+    new Mc.SimpleObjectType({ name: "",
+			      bodyText: "",
+			      enabled: false
+			    },
+			    { bodyText: Mc.ObjectTypes.paragraphString });
+
 if (__$_new_instances.length) {
     for (var i = 0; i < __$_new_instances.length; i++) {
 	var instance = __$_new_instances[i];

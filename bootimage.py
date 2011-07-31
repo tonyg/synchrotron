@@ -12,6 +12,19 @@ f.close()
 mods = {}
 defs = []
 
+def loadStyleFile(name):
+    f = file(name)
+    body = f.read()
+    f.close()
+    metadata = {}
+    metadata["bodyText"] = body
+    metadata["name"] = name
+
+    d = dict(metadata)
+    d["objectType"] = "cssStyleSheet"
+    d["enabled"] = True
+    defs.append(d)
+
 def loadModspec(name):
     f = file(name + ".modspec.js")
     metadata = json.load(f)
@@ -41,8 +54,23 @@ def replaceMarker(marker, value):
     print prefix + '\n' + value
 
 goal = sys.argv[1]
+modspecs = []
+stylefiles = []
+mode = modspecs
 for name in sys.argv[2:]:
+    if name == '--styles':
+        mode = stylefiles
+    elif name == '--modules':
+        mode = modspecs
+    else:
+        mode.append(name)
+
+for name in stylefiles:
+    loadStyleFile(name)
+
+for name in modspecs:
     loadModspec(name)
+
 replaceMarker('__$__exported_repo__$__', '(' + json.dumps({}, indent = 2) + ')')
 replaceMarker('__$__new_instances__$__', '(' + json.dumps(defs, indent = 2) + ')')
 replaceMarker('__$__goal__$__', '(' + json.dumps(goal, indent = 2) + ')')
