@@ -13,29 +13,13 @@ if (__$_exported_repo.repoId) {
 }
 var checkout = new Mc.Checkout(repo);
 
-var moduleDefinitionTypeTable = Mc.typeTableFun(
-    {
-	"bodyText": Mc.ObjectTypes.paragraphString
-    }
-);
-
-Mc.TypeDirectory["moduleDefinition"] = {
-    emptyInstance: function () {
-	return {name: "",
-		exports: [],
-		imports: [],
-		bodyText: ""};
-    },
-    diff: function (v0, v1) {
-	return Mc.ObjectTypes.simpleObject.diff(v0, v1, moduleDefinitionTypeTable);
-    },
-    patch: function (v0, p) {
-	return Mc.ObjectTypes.simpleObject.patch(v0, p, moduleDefinitionTypeTable);
-    },
-    merge: function (v1, v0, v2) {
-	return Mc.ObjectTypes.simpleObject.merge(v1, v0, v2, moduleDefinitionTypeTable);
-    }
-};
+Mc.TypeDirectory["moduleDefinition"] =
+    new Mc.SimpleObjectType({ name: "",
+			      exports: [],
+			      imports: [],
+			      bodyText: ""
+			    },
+			    { bodyText: Mc.ObjectTypes.paragraphString });
 
 if (__$_new_instances.length) {
     for (var i = 0; i < __$_new_instances.length; i++) {
@@ -142,7 +126,7 @@ function forceFull(repo, blobId) {
 	var t = Mc.lookupType(Mc.Util.blobIdType(blobId));
 	var patcher = Mc.typeMethod(t, "patch");
 	entry._boot_full =
-	    JSON.stringify(patcher(Mc.validInstance(t, repo.lookupUnsafe(entry.directParent)),
+	    JSON.stringify(patcher(Mc.validInstance(t, repo.lookupUnsafe(entry.baseId)),
 				   JSON.parse(entry.diff)));
     }
 };
@@ -176,6 +160,7 @@ function saveImageAs(path) {
 				 forceFull(repo, blobId);
 			     }
 			 });
+    forceFull(repo, checkout.directParentIndexId);
     forceFull(repo, checkout.directParent);
 
     spliceMarker('exported_repo', repo.exportRevisions());

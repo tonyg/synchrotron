@@ -190,14 +190,92 @@ Mc.Util = (function ()
 // (Note that dicts here are the only things that can have nested merge
 // results.)
 //
-// An index is a commit-record that also maps "filename"s to inodeIds,
-// and inodeIds to blobIds.
+// An index is a record that also maps "filename"s to inodeIds, and
+// inodeIds to blobIds. A commit points to a value, some metadata, and
+// a (possibly-empty) list of parent commits.
 //
-// A checkout is a non-version-controlled object that holds an index and
-// also provides read/write/merge/commit services and a cache of
-// unpickled objects.
+// A checkout is a non-version-controlled object that holds a commit
+// and an index and which also provides read/write/merge/commit
+// services and a cache of unpickled objects.
 
 // TODO: Add a "children" operation for tracing GC of the repository.
+
+Mc.SimpleObjectType = function (emptyInstanceValue, typeTable) {
+    this.emptyInstanceValue = emptyInstanceValue;
+    this.typeTable = typeTable;
+};
+
+Mc.SimpleObjectType.prototype.emptyInstance = function () {
+    return this.emptyInstanceValue;
+};
+
+Mc.SimpleObjectType.prototype.typeTableFun = function (key) {
+    return this.typeTable[key];
+};
+
+Mc.SimpleObjectType.prototype.diff = function (v0, v1) {
+    var removed = Mc.Util.dict_difference(v0, v1);
+    var added = Mc.Util.dict_difference(v1, v0);
+    var changed = {};
+    var common = Mc.Util.dict_difference(v1, added);
+    for (var prop in common) {
+	var propType = this.typeTableFun(prop) || Mc.ObjectTypes.simpleScalar;
+	var p = propType.diff(v0[prop], v1[prop]);
+	if (p !== null) {
+	    changed[prop] = p;
+	}
+    }
+    var result = {};
+    if (!Mc.Util.dict_isempty(removed)) result.removed = Mc.Util.dict_to_set_list(removed);
+    if (!Mc.Util.dict_isempty(added)) result.added = added;
+    if (!Mc.Util.dict_isempty(changed)) result.changed = changed;
+    if (Mc.Util.dict_isempty(result)) return null;
+    return result;
+};
+
+Mc.SimpleObjectType.prototype.patch = function (v0, p) {
+    var result = Mc.Util.deepCopy(v0);
+    if (p === null) return result;
+    var k;
+    if (p.removed) {
+	for (var i = 0; i < p.removed.length; i++) {
+	    delete result[p.removed[i]];
+	}
+    }
+    if (p.added) { for (k in p.added) { result[k] = p.added[k]; } }
+    if (p.changed) {
+	for (k in p.changed) {
+	    var propType = this.typeTableFun(k) || Mc.ObjectTypes.simpleScalar;
+	    result[k] = propType.patch(result[k], p.changed[k]);
+	}
+    }
+    return result;
+};
+
+Mc.SimpleObjectType.prototype.merge = function (v1, v0, v2) {
+    var props = Mc.Util.dict_union(v1, v2);
+    var bResult = {};
+    var failures = {};
+    var haveConflicts = false;
+    for (var prop in props) {
+	var propType = (this.typeTableFun(prop) || Mc.ObjectTypes.simpleScalar);
+	var mergedPropValue = propType.merge(Mc.validInstance(propType, v1[prop]),
+					     Mc.validInstance(propType, v0[prop]),
+					     Mc.validInstance(propType, v2[prop]));
+	if ("ok" in mergedPropValue) {
+	    bResult[prop] = mergedPropValue.ok;
+	} else {
+	    failures[prop] = mergedPropValue;
+	    haveConflicts = true;
+	}
+    }
+
+    if (haveConflicts) {
+	return {objectType: "object", partial: bResult, conflicts: failures};
+    } else {
+	return {objectType: "object", ok: bResult};
+    }
+};
 
 Mc.ObjectTypes = {
     Default: {
@@ -261,113 +339,34 @@ Mc.ObjectTypes = {
 	}
     },
 
-    simpleObject: {
-	emptyInstance: function () { return {}; },
-	diff: function (v0, v1, typeTableFun) {
-	    var removed = Mc.Util.dict_difference(v0, v1);
-	    var added = Mc.Util.dict_difference(v1, v0);
-	    var changed = {};
-	    if (!typeTableFun) {
-		typeTableFun = Mc.SimpleObjectTypeTableFun;
-	    }
-	    var common = Mc.Util.dict_difference(v1, added);
-	    for (var prop in common) {
-		var differ = (typeTableFun(prop) || Mc.ObjectTypes.simpleScalar).diff;
-		var p = differ(v0[prop], v1[prop]);
-		if (p !== null) {
-		    changed[prop] = p;
-		}
-	    }
-	    var result = {};
-	    if (!Mc.Util.dict_isempty(removed)) result.removed = Mc.Util.dict_to_set_list(removed);
-	    if (!Mc.Util.dict_isempty(added)) result.added = added;
-	    if (!Mc.Util.dict_isempty(changed)) result.changed = changed;
-	    if (Mc.Util.dict_isempty(result)) return null;
-	    return result;
-	},
-	patch: function (v0, p, typeTableFun) {
-	    var result = Mc.Util.deepCopy(v0);
-	    if (p === null) return result;
-	    var k;
-	    if (!typeTableFun) {
-		typeTableFun = Mc.SimpleObjectTypeTableFun;
-	    }
-	    if (p.removed) {
-		for (var i = 0; i < p.removed.length; i++) {
-		    delete result[p.removed[i]];
-		}
-	    }
-	    if (p.added) { for (k in p.added) { result[k] = p.added[k]; } }
-	    if (p.changed) {
-		for (k in p.changed) {
-		    var patcher = (typeTableFun(k) || Mc.ObjectTypes.simpleScalar).patch;
-		    result[k] = patcher(result[k], p.changed[k]);
-		}
-	    }
-	    return result;
-	},
-	merge: function(v1, v0, v2, typeTableFun) {
-	    var props = Mc.Util.dict_union(v1, v2);
-	    var bResult = {};
-	    var failures = {};
-	    var haveConflicts = false;
-	    if (!typeTableFun) {
-		typeTableFun = Mc.SimpleObjectTypeTableFun;
-	    }
-	    for (var prop in props) {
-		var propType = (typeTableFun(prop) || Mc.ObjectTypes.simpleScalar);
-		var mergedPropValue = propType.merge(Mc.validInstance(propType, v1[prop]),
-						     Mc.validInstance(propType, v0[prop]),
-						     Mc.validInstance(propType, v2[prop]));
-		if ("ok" in mergedPropValue) {
-		    bResult[prop] = mergedPropValue.ok;
-		} else {
-		    failures[prop] = mergedPropValue;
-		    haveConflicts = true;
-		}
-	    }
+    rawObject: new Mc.SimpleObjectType({}, {}),
 
-	    if (haveConflicts) {
-		return {objectType: "object", partial: bResult, conflicts: failures};
-	    } else {
-		return {objectType: "object", ok: bResult};
-	    }
-	}
-    },
+    index: (function () {
+	var t = new Mc.SimpleObjectType({inodes: {}, names: {}},
+					{
+					    inodes: new Mc.SimpleObjectType({}, {}),
+					    names: new Mc.SimpleObjectType({}, {})
+					});
+	t.merge = function (v1, v0, v2) {
+	    // We cannot merge indexes directly for the same reasons
+	    // we can't merge commits.
+	    throw {message: "Cannot merge indexes", v1: v1, v0: v0, v2: v2};
+	};
+	return t;
+    })(),
 
-    basicIndex: {
-	emptyInstance: function () { return {inodes: {}, names: {}, metadata: {}}; },
+    commit: {
+	emptyInstance: function () { return {value: null, parents: [], metadata: {}}; },
 	diff: function (v0, v1) {
-	    var result = {};
-	    var diffExists = false;
-	    var d;
-	    d = Mc.ObjectTypes.simpleObject.diff(v0.inodes, v1.inodes, Mc.RawObjectTypeTableFun);
-	    if (d) { result.inodes = d; diffExists = true; }
-	    d = Mc.ObjectTypes.simpleObject.diff(v0.names, v1.names, Mc.RawObjectTypeTableFun);
-	    if (d) { result.names = d; diffExists = true; }
-	    d = Mc.ObjectTypes.simpleObject.diff(v0.metadata, v1.metadata, Mc.RawObjectTypeTableFun);
-	    if (d) { result.metadata = d; diffExists = true; }
-	    if (!diffExists) return null;
-	    return result;
+	    throw {message: "Cannot diff commits", v0: v0, v1: v1};
 	},
-	patch: function (v0, p) {
-	    var result = Mc.Util.deepCopy(v0);
-	    if (p !== null) {
-		result.inodes = Mc.ObjectTypes.simpleObject.patch(result.inodes, p.inodes || null);
-		result.names = Mc.ObjectTypes.simpleObject.patch(result.names, p.names || null);
-		result.metadata = Mc.ObjectTypes.simpleObject.patch(result.metadata, p.metadata || null);
-	    }
-	    return result;
-	},
-	merge: function(v1, v0, v2) {
-	    // We cannot merge indexes directly, because they map
-	    // inode IDs to blob IDs, and merging would need to insert
-	    // new blob IDs. Instead, we construct a merged index
-	    // explicitly, outside of the normal merging code.
-	    throw {message: "Cannot merge indexes",
-		   v1: v1,
-		   v0: v0,
-		   v2: v2};
+	merge: function (v1, v0, v2) {
+	    // We cannot merge commits directly, because it involves
+	    // recursive merges which create new blob IDs, and we
+	    // don't know our repository. Instead, we construct a
+	    // merged commit explicitly, outside of the normal merging
+	    // code.
+	    throw {message: "Cannot merge commits", v1: v1, v0: v0, v2: v2};
 	}
     }
 };
@@ -375,8 +374,9 @@ Mc.ObjectTypes = {
 Mc.TypeDirectory = {
     "scalar": Mc.ObjectTypes.simpleScalar,
     "text": Mc.ObjectTypes.simpleText,
-    "object": Mc.ObjectTypes.simpleObject,
-    "index": Mc.ObjectTypes.basicIndex
+    "object": Mc.ObjectTypes.rawObject,
+    "index": Mc.ObjectTypes.index,
+    "commit": Mc.ObjectTypes.commit
 };
 
 Mc.lookupType = function (typeName) {
@@ -389,10 +389,13 @@ Mc.lookupType = function (typeName) {
 };
 
 Mc.typeMethod = function (t, methodName) {
-    if (!t) {
-	t = Mc.ObjectTypes.Default;
+    if (!t) { t = Mc.ObjectTypes.Default; }
+    var method = t[methodName];
+    if (method) {
+	return function () { return method.apply(t, arguments); };
+    } else {
+	return Mc.ObjectTypes.Default[methodName];
     }
-    return (t[methodName] || Mc.ObjectTypes.Default[methodName]);
 };
 
 Mc.validInstance = function (t, maybeInstance) {
@@ -402,21 +405,7 @@ Mc.validInstance = function (t, maybeInstance) {
     return maybeInstance;
 };
 
-Mc.SimpleObjectTypeTable = {
-    "text": Mc.ObjectTypes.simpleText
-};
-
-Mc.typeTableFun = function (table) {
-    return function (key) {
-	return table[key];
-    };
-};
-
-Mc.SimpleObjectTypeTableFun = Mc.typeTableFun(Mc.SimpleObjectTypeTable);
-
-Mc.RawObjectTypeTableFun = Mc.typeTableFun({});
-
-Mc.Repository = function() {
+Mc.Repository = function () {
     this.repoId = Mc.Util.random_uuid();
     this.blobs = {}; // blobId -> pickledInstanceRecord
     this.tags = {}; // repoid/bookmarkname -> {blobId: blobId, isBranch: boolean}
@@ -508,33 +497,26 @@ Mc.Repository.prototype.store = function (instance, // a picklable object
 					  baseId)
 {
     var t = Mc.lookupType(objectType);
-    var entry = {directParent: directParent, additionalParent: additionalParent};
-    // TODO: we currently index by the sha1 of the instance, thus
-    // ignoring potentially identical content with different
-    // directParent or additionalParent. This needs to stop; perhaps
-    // by storing the instance (or diff) as a blob first, and then
-    // storing the entry as an additional blob.
-
     var jsonInstance = Mc.typeMethod(t, "pickle")(instance);
     var jsonText = JSON.stringify(jsonInstance);
     var blobId = SHA1.hex_sha1(SHA1.encode_utf8(jsonText));
     if (Mc._debugMode) { blobId = "blob-" + blobId.substring(0, 8); }
 
-    if (directParent) {
+    var entry;
+    if (baseId) {
 	var differ = Mc.typeMethod(t, "diff");
-	var diffJson = differ(Mc.validInstance(t, this.lookupUnsafe(directParent)), instance);
+	var diffJson = differ(Mc.validInstance(t, this.lookupUnsafe(baseId)), instance);
 	if (diffJson === null) {
 	    // No changes to the data? Then claim we're identical to
-	    // our parent. SEE ALSO THE TODO IMMEDIATELY ABOVE IN THIS
-	    // FUNCTION.
-	    return objectType + ":" + Mc.Util.blobIdKey(directParent);
+	    // our base object.
+	    return objectType + ":" + Mc.Util.blobIdKey(baseId);
 	}
-	entry.diff = JSON.stringify(diffJson);
+	entry = {baseId: baseId, diff: JSON.stringify(diffJson)};
     } else {
-	entry.full = jsonText;
+	entry = {full: jsonText};
     }
-
     this.blobs[blobId] = entry;
+
     return objectType + ":" + blobId;
 };
 
@@ -554,15 +536,16 @@ Mc.Repository.prototype.lookupUnsafe = function (blobId, shouldResolve) {
 
 	var t = Mc.lookupType(Mc.Util.blobIdType(resolved));
 
-	// TODO: consider using unpickle(patch(base, diff)), and
-	// changing the meaning of patch to return a JSON object
-	// suitable for unpickling rather than an already-unpickled
-	// object.
 
 	if (entry.diff) {
+	    // We don't use unpickle(patch(base, diff)) here because
+	    // the base object is the result of lookupUnsafe and
+	    // therefore is already unpickled. The contract of patch
+	    // is to adjust an already-unpickled instance to take into
+	    // account the given patch data.
 	    var patcher = Mc.typeMethod(t, "patch");
 	    this.cache[resolved] =
-		patcher(Mc.validInstance(t, this.lookupUnsafe(entry.directParent)),
+		patcher(Mc.validInstance(t, this.lookupUnsafe(entry.baseId)),
 			JSON.parse(entry.diff));
 	} else {
 	    var unpickler = Mc.typeMethod(t, "unpickle");
@@ -572,33 +555,7 @@ Mc.Repository.prototype.lookupUnsafe = function (blobId, shouldResolve) {
     return this.cache[resolved];
 };
 
-Mc.Repository.prototype.lookupParents = function (blobId) {
-    var result = [];
-    var entry = this.blobs[Mc.Util.blobIdKey(blobId)];
-    if (entry) {
-	if (entry.directParent) result.push(entry.directParent);
-	if (entry.additionalParent) result.push(entry.additionalParent);
-    }
-    return result;
-};
-
-Mc.Repository.prototype.leastCommonAncestor = function(b1, b2) {
-    var $elf = this;
-    function lookupParents(blobId) { return $elf.lookupParents(blobId); }
-    return Graph.least_common_ancestor(lookupParents, this.resolve(b1), this.resolve(b2));
-};
-
-Mc.Repository.prototype.canMerge = function(b1, b2) {
-    var ancestorBlobId = this.leastCommonAncestor(b1, b2);
-    return !(b1 == ancestorBlobId || b2 == ancestorBlobId);
-};
-
-Mc.Repository.prototype.merge = function(b1, b2) {
-    var ancestorBlobId = this.leastCommonAncestor(b1, b2);
-    return this.merge3(b1, ancestorBlobId, b2);
-};
-
-Mc.Repository.prototype.merge3 = function (b1, b0, b2) {
+Mc.Repository.prototype.merge = function (b1, b0, b2) {
     b1 = this.resolve(b1);
     b2 = this.resolve(b2);
 
@@ -686,14 +643,18 @@ Mc.Checkout = function (repo, blobIdOrTag) {
 
 Mc.Checkout.prototype.forceCheckout = function (blobIdOrTag) {
     var resolved = this.repo.resolve(blobIdOrTag);
-    var index = this.repo.lookup(resolved, false);
-    if (index) {
-	this.inodes = index.inodes; // inodeId -> blobId
-	this.names = index.names; // name -> inodeId
+    var commit = this.repo.lookup(resolved, false);
+    if (commit) {
+	var index = this.repo.lookup(commit.value);
+	if (!index) { throw {message: "Checkout's parent's index not found", commitId: resolved}; }
+	this.inodes = index.inodes;
+	this.names = index.names;
+	this.directParentIndexId = commit.value;
 	this.directParent = resolved;
     } else {
 	this.inodes = {};
 	this.names = {};
+	this.directParentIndexId = undefined;
 	this.directParent = undefined;
     }
     this.resetTemporaryState();
@@ -701,7 +662,7 @@ Mc.Checkout.prototype.forceCheckout = function (blobIdOrTag) {
 
 Mc.Checkout.prototype.resetTemporaryState = function () {
     this.unmodifiedInodes = Mc.Util.deepCopy(this.inodes);
-    this.newInstances = []; // list of {instance:, objectType:, directParent:, additionalParent:}
+    this.newInstances = []; // list of {instance:, objectType:, baseId:}
     this.dirtyInodes = {}; // inodeId -> ({instanceIndex:instanceIndex} | {blobId:blobId})
     this.conflicts = null;
     this.anyDirty = false;
@@ -719,6 +680,9 @@ Mc.Checkout.prototype.tag = function (tagName, force, isBranch) {
     if (existing && !force) {
 	return false;
     } else {
+	if (!this.directParent) {
+	    throw {message: "Cannot tag checkout with no parent commit"};
+	}
 	this.repo.tag(this.directParent, tagName, isBranch || false);
 	if (isBranch) {
 	    this.activeBranch = tagName;
@@ -767,8 +731,7 @@ Mc.Checkout.prototype.writeInode = function (inodeId,
 {
     this.newInstances.push({instance: Mc.Util.deepCopy(instance),
 			    objectType: objectType,
-			    directParent: directParent,
-			    additionalParent: additionalParent});
+			    baseId: baseId});
     this.dirtyInodes[inodeId] = {instanceIndex: (this.newInstances.length - 1)};
     this.anyDirty = true;
 };
@@ -857,7 +820,18 @@ Mc.Checkout.prototype.isDirty = function () {
     return this.anyDirty;
 };
 
-Mc.Checkout.prototype.merge = function(otherBlobIdOrTag) {
+Mc.Checkout.prototype.leastCommonAncestor = function (otherCommitId) {
+    var repo = this.repo;
+    function lookupParents(blobId) { return repo.lookup(blobId).parents; }
+    return Graph.least_common_ancestor(lookupParents, this.directParent, otherCommitId);
+};
+
+Mc.Checkout.prototype.canMerge = function (otherCommitId) {
+    var ancestorBlobId = this.leastCommonAncestor(otherCommitId);
+    return !(b1 == ancestorBlobId || b2 == ancestorBlobId);
+};
+
+Mc.Checkout.prototype.merge = function (otherBlobIdOrTag) {
     this.ensureClean("merge into");
 
     var $elf = this;
@@ -869,7 +843,7 @@ Mc.Checkout.prototype.merge = function(otherBlobIdOrTag) {
 	throw {message: "Could not resolve revision name", blobIdOrTag: otherBlobIdOrTag};
     }
 
-    var b0 = repo.leastCommonAncestor(b1, b2);
+    var b0 = this.leastCommonAncestor(b2);
     if (b0 == b1) {
 	// Fast-forward to b2.
 	this.forceCheckout(b2);
@@ -880,16 +854,19 @@ Mc.Checkout.prototype.merge = function(otherBlobIdOrTag) {
 	return false;
     }
 
-    var v1 = repo.lookupUnsafe(b1, false);
-    var v2 = repo.lookupUnsafe(b2, false);
-    var v0 = b0 ? repo.lookupUnsafe(b0, false) : {inodes: {}, names: {}};
+    var commit1 = repo.lookupUnsafe(b1, false);
+    var commit2 = repo.lookupUnsafe(b2, false);
+    var commit0 = b0 ? repo.lookupUnsafe(b0, false) : Mc.ObjectTypes.commit.emptyInstance();
 
-    var conflicts = {};
-    var haveConflicts = false;
+    var index1 = repo.lookupUnsafe(this.directParentIndexId, false);
+    var index2 = repo.lookupUnsafe(commit2.value, false);
+    var index0 = repo.lookupUnsafe(commit0.value, false);
 
-    var mergeResult;
+    if (!index1) { throw {message: "Parent's index not found", commitId: b1}; }
+    if (!index2) { throw {message: "Other branch's index not found", commitId: b2}; }
+    if (!index0) { throw {message: "Ancestor's index not found", commitId: b0}; }
 
-    function inodeTableMerger(v1, v0, v2) {
+    function inodeTableEntryMerger(v1, v0, v2) {
 	var mr;
 	mr = Mc.ObjectTypes.simpleScalar.merge(v1, v0, v2);
 	if (mr.conflict) {
@@ -897,7 +874,7 @@ Mc.Checkout.prototype.merge = function(otherBlobIdOrTag) {
 		// DieDieDieMerge for deleted entries.
 		return {objectType: "inodeTable", ok: {deleted: true}};
 	    }
-	    mr = repo.merge3(v1, v0, v2);
+	    mr = repo.merge(v1, v0, v2);
 	    if ("ok" in mr) {
 		if (mr.mergeBlobId) {
 		    return {objectType: "inodeTable", ok: {blobId: mr.mergeBlobId}};
@@ -913,6 +890,24 @@ Mc.Checkout.prototype.merge = function(otherBlobIdOrTag) {
 	}
     }
 
+    var inodeTableType = new Mc.SimpleObjectType({}, {});
+    inodeTableType.typeTableFun = function (key) {
+	return {
+	    merge: inodeTableEntryMerger,
+	    emptyInstance: function () {
+		return undefined;
+	    }
+	};
+    };
+
+    var mergeResult;
+    mergeResult = inodeTableType.merge(index1.inodes, index0.inodes, index2.inodes);
+
+    var conflicts = {};
+    var haveConflicts = false;
+
+    this.inodes = {};
+
     function updateInodes(tab) {
 	for (var inodeId in tab) {
 	    var r = tab[inodeId];
@@ -924,11 +919,23 @@ Mc.Checkout.prototype.merge = function(otherBlobIdOrTag) {
 		$elf.writeInode(inodeId,
 				r.instance,
 				r.objectType,
-				v1.inodes[inodeId],
-				v2.inodes[inodeId]);
+				index1.inodes[inodeId]);
+		// TODO: possibly diff it against v2.inodes[inodeId]
+		// to see if the diff is any shorter.
 	    }
 	}
     }
+
+    if ("ok" in mergeResult) {
+	updateInodes(mergeResult.ok);
+    } else {
+	haveConflicts = true;
+	updateInodes(mergeResult.partial);
+	conflicts.inodes = mergeResult.conflicts;
+    }
+
+    mergeResult = Mc.ObjectTypes.rawObject.merge(index1.names, index0.names, index2.names);
+    this.names = {};
 
     function updateNames(tab) {
 	for (var name in tab) {
@@ -938,27 +945,6 @@ Mc.Checkout.prototype.merge = function(otherBlobIdOrTag) {
 	}
     }
 
-    mergeResult = Mc.ObjectTypes.simpleObject.merge(v1.inodes, v0.inodes, v2.inodes,
-						    function (key) {
-							return {
-							    merge: inodeTableMerger,
-							    emptyInstance: function () {
-								return undefined;
-							    }
-							};
-						    });
-    this.inodes = {};
-    if ("ok" in mergeResult) {
-	updateInodes(mergeResult.ok);
-    } else {
-	haveConflicts = true;
-	updateInodes(mergeResult.partial);
-	conflicts.inodes = mergeResult.conflicts;
-    }
-
-    mergeResult = Mc.ObjectTypes.simpleObject.merge(v1.names, v0.names, v2.names,
-						    function (key) { return null; });
-    this.names = {};
     if ("ok" in mergeResult) {
 	updateNames(mergeResult.ok);
     } else {
@@ -973,7 +959,9 @@ Mc.Checkout.prototype.merge = function(otherBlobIdOrTag) {
     return true;
 };
 
-Mc.Checkout.prototype.commit = function(metadata) {
+Mc.Checkout.prototype.commit = function (metadata) {
+    var repo = this.repo;
+
     if (this.conflicts !== null) {
 	throw {message: "Cannot commit with outstanding conflicts"};
     }
@@ -983,8 +971,6 @@ Mc.Checkout.prototype.commit = function(metadata) {
     }
 
     if (this.anyDirty) {
-	var repo = this.repo;
-
 	for (var inodeId in this.dirtyInodes) {
 	    var instanceLocation = this.dirtyInodes[inodeId];
 	    if (instanceLocation.blobId) {
@@ -993,8 +979,7 @@ Mc.Checkout.prototype.commit = function(metadata) {
 		var x = this.newInstances[instanceLocation.instanceIndex];
 		this.inodes[inodeId] = repo.store(x.instance,
 						  x.objectType,
-						  x.directParent,
-						  x.additionalParent);
+						  x.baseId);
 	    }
 	}
 
@@ -1006,19 +991,25 @@ Mc.Checkout.prototype.commit = function(metadata) {
 	var inodesToRemove = Mc.Util.dict_difference(this.inodes, inodesInUse);
 	this.inodes = Mc.Util.dict_difference(this.inodes, inodesToRemove);
 
-	var commitId = repo.store({
-				      inodes: this.inodes,
-				      names: this.names,
-				      metadata: metadata || ({})
-				  },
-				  "index",
-				  this.directParent,
-				  this.additionalParent);
+	var indexId = repo.store({ inodes: this.inodes, names: this.names },
+				 "index",
+				 this.directParentIndexId);
+
+	var parents = [];
+	if (this.directParent) { parents.push(this.directParent); }
+	if (this.additionalParent) { parents.push(this.additionalParent); }
+
+	var commitId = repo.store({ value: indexId,
+				    parents: parents,
+				    metadata: metadata || ({}) },
+				  "commit",
+				  null);
 
 	this.resetTemporaryState();
+	this.directParentIndexId = indexId;
 	this.directParent = commitId;
-
-	repo.tag(commitId, this.activeBranch, true);
     }
+
+    repo.tag(this.directParent, this.activeBranch, true);
     return this.directParent;
 };

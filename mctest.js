@@ -33,12 +33,14 @@ function DrawMcRepo(repo) {
     }
     function traceBranch(branchName, blobId) {
 	if (blobId) {
-	    var entry = repo.blobs[Mc.Util.blobIdKey(blobId)];
-	    traceBranch(branchName, entry.directParent);
-	    traceBranch(branchName, entry.additionalParent);
+	    var entry = repo.lookup(blobId);
+	    for (var i = 0; i < entry.parents.length; i++) {
+		traceBranch(branchName, entry.parents[i]);
+	    }
 	    recordBranch(blobId, branchName);
-	    recordChild(entry.directParent, blobId);
-	    recordChild(entry.additionalParent, blobId);
+	    for (var i = 0; i < entry.parents.length; i++) {
+		recordChild(entry.parents[i], blobId);
+	    }
 	}
     }
     var allBranches = repo.allBranches();
@@ -51,12 +53,14 @@ function DrawMcRepo(repo) {
 	    var result = {};
 	    var bs = allBranches;
 	    for (var tag in bs) {
-		result[bs[tag]] = 1;
+		if (!children[bs[tag]]) {
+		    result[bs[tag]] = 1;
+		}
 	    }
 	    return Mc.Util.dict_to_set_list(result);
 	},
 	lookupParents: function(blobId) {
-	    return repo.lookupParents(blobId);
+	    return repo.lookup(blobId).parents;
 	},
 	lookupChildren: function(blobId) {
 	    return Mc.Util.dict_to_set_list(children[blobId]);
@@ -89,26 +93,26 @@ Mc.Tests = {
             //print(pp({fs: fs}));
             fs.forEachFile(function (fileName) {
                                print(fileName + ": " +
-                                     fs.readFile(fileName).instance.text.join(" "));
+                                     fs.readFile(fileName).instance.join(" "));
                            });
             print();
         }
 
         d("start");
 
-        fs.writeFile("File A", {"text": "A B C D E".split(/ /)});
-        fs.writeFile("File B", {"text": ["One line"]});
+        fs.writeFile("File A", "A B C D E".split(/ /), "text");
+        fs.writeFile("File B", ["One line"], "text");
         d("pre-rA");
         var rA = fs.commit({summary: "First commit"});
         d("post-rA");
 
         assert(fs.tag("BBB", false, true), "creating non-forced branch tag");
 
-        fs.writeFile("File A", {"text": "G G G A B C D E".split(/ /)});
+        fs.writeFile("File A", "G G G A B C D E".split(/ /), "text");
         var rB1 = fs.commit({summary: "Second commit"});
         d("post-rB1");
 
-        fs.writeFile("File A", {"text": "A B C D E G G G A B C D E".split(/ /)});
+        fs.writeFile("File A", "A B C D E G G G A B C D E".split(/ /), "text");
         var rB2 = fs.commit({summary: "Third commit"});
         d("post-rB2");
 
@@ -117,7 +121,7 @@ Mc.Tests = {
         d("post-update-to-rA");
 
         fs.renameFile("File A", "File A, renamed");
-        fs.writeFile("File A, renamed", {"text": "A B X D E".split(/ /)});
+        fs.writeFile("File A, renamed", "A B X D E".split(/ /), "text");
         Mc.Tests.revisionC = fs.commit({summary: "Fourth commit"});
         d("post-rC");
 
@@ -165,7 +169,7 @@ Mc.Tests = {
 	repo.remotes["origin"] = {repoId: ed.repoId};
 
         var fs = new Mc.Checkout(repo);
-// 	fs.writeFile("File B", {"text": ["Conflicting"]});
+// 	fs.writeFile("File B", ["Conflicting"], "text");
 // 	fs.commit({summary: "Interfering commit"});
 
 	print("Merging with origin/master");
@@ -179,14 +183,18 @@ Mc.Tests = {
         print();
 
 	print(DrawMcRepo(repo));
+	fs.commit(); // should actually move the master tag up by the fast-forward
+	print(DrawMcRepo(repo));
     },
 
     Rt3: function() {
         var pp = Mc.Tests.pp;
 	var repo = new Mc.Repository();
-	var b1 = repo.store({"text": ["A", "B", "C"]}, "object", null, null);
-	var b2 = repo.store({"text": ["A", "D", "C"]}, "object", null, null);
-	print(pp({b1: b1, b2: b2, rt3MergeResult: repo.merge(b1, b2)}));
+	var b1 = repo.store(["A", "B", "C"], "text", null);
+	var b2 = repo.store(["A", "D", "C"], "text", null);
+	var b0 = repo.store(["A", "C"], "text", null);
+	print(pp({b1: b1, b2: b2, rt3MergeResult: repo.merge(b1, b0, b2)}));
+	print(pp({b1: b1, b2: b2, rt3MergeResult: repo.merge(b1, null, b2)}));
     }
 };
 

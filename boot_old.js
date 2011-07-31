@@ -9,7 +9,13 @@ var __$_module_namespace = null;
 	     return eval('(' + (blob._boot_full || blob.full) + ')');
 	 }
 
-	 var index = lookup(r.tags[r.repoId + "/master"].blobId.substring(6));
+	 // Magic numbers:
+	 // 7 is the length of the expected prefix "commit:".
+	 // 6 is the length of the expected prefix "index:".
+	 // 17 is the length of the expected prefix "moduleDefinition:".
+	 //
+	 var commit = lookup(r.tags[r.repoId + "/master"].blobId.substring(7));
+	 var index = lookup(commit.value.substring(6));
 	 var module = lookup(index.inodes[index.names["net.lshift.synchrotron.module"]].substring(17));
 	 var v = eval('(function () {' + module.bodyText +
 		      '; return [ModuleDefinitionDirectory,' +

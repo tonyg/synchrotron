@@ -10,8 +10,7 @@
 		{"validInstance": "Mc.validInstance"},
 		{"lookupType": "Mc.lookupType"},
 		{"typeMethod": "Mc.typeMethod"},
-		{"SimpleObjectTypeTable": "Mc.SimpleObjectTypeTable"},
-		{"typeTableFun": "Mc.typeTableFun"},
+		{"SimpleObjectType": "Mc.SimpleObjectType"},
 		{"Repository": "Mc.Repository"},
 		{"Checkout": "Mc.Checkout"}]
 }
