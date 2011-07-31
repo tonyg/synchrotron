@@ -374,6 +374,8 @@ Mc.ObjectTypes = {
 Mc.TypeDirectory = {
     "scalar": Mc.ObjectTypes.simpleScalar,
     "text": Mc.ObjectTypes.simpleText,
+    "textFile": new Mc.SimpleObjectType({bodyText: ""},
+					{bodyText: Mc.ObjectTypes.paragraphString}),
     "object": Mc.ObjectTypes.rawObject,
     "index": Mc.ObjectTypes.index,
     "commit": Mc.ObjectTypes.commit

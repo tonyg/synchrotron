@@ -37,14 +37,5 @@ function main() {
     c.writeFile("bar", "hello", "text");
     c.commit({summary: "Add bar"});
 
-    c.forEachFileOfType("moduleDefinition",
-			function (name) {
-			    var p = new Panels.Panel(Panels.panelsDiv, name);
-			    CodeMirror.CodeMirror(p.body[0], {
-				value: c.readFile(name).instance.bodyText,
-				mode: "javascript",
-				lineNumbers: true,
-				matchBrackets: true
-			    });
-			});
+    $("body").append($(Panels.skin("test")));
 };

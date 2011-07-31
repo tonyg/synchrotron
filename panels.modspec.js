@@ -10,5 +10,8 @@
 		"rightDiv",
 		"panelsDiv",
 		"footerDiv",
-		"Panel"]
+
+		"Panel",
+
+		"skin"]
 }

@@ -7,6 +7,7 @@ INDEX_MODFILES=\
 INDEX_STYLES=\
 	synchrotron.css panels.css \
 	codemirror.css codemirror-theme-default.css
+INDEX_SKINS=$(wildcard skins/*)
 
 INDEX_BOOTMOD=net.lshift.synchrotron.demo
 
@@ -19,4 +20,8 @@ clean:
 	rm -f index.html testIndex-*.html
 
 index.html: bootimage.py $(INDEX_MODSOURCES) $(INDEX_MODSPECS) $(INDEX_STYLES)
-	./bootimage.py $(INDEX_BOOTMOD) --styles $(INDEX_STYLES) --modules $(INDEX_MODFILES) > $@
+	./bootimage.py $(INDEX_BOOTMOD) \
+		--skins $(INDEX_SKINS) \
+		--styles $(INDEX_STYLES) \
+		--modules $(INDEX_MODFILES) \
+	> $@

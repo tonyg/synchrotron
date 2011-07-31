@@ -4,6 +4,7 @@ try:
 except:
     import simplejson as json
 import sys
+import os
 
 f = file("image.boot.html")
 template = f.read()
@@ -11,6 +12,20 @@ f.close()
 
 mods = {}
 defs = []
+
+def loadSkin(name):
+    sys.stderr.write("Loading skin file %s...\n" % (name,))
+    f = file(name)
+    body = f.read()
+    f.close()
+    metadata = {}
+    metadata["bodyText"] = body
+    metadata["name"] = "skin:" + os.path.splitext(os.path.basename(name))[0]
+    metadata["mimeType"] = "text/plain"
+
+    d = dict(metadata)
+    d["objectType"] = "textFile"
+    defs.append(d)
 
 def loadStyleFile(name):
     sys.stderr.write("Loading CSS style file %s...\n" % (name,))
@@ -20,10 +35,11 @@ def loadStyleFile(name):
     metadata = {}
     metadata["bodyText"] = body
     metadata["name"] = name
+    metadata["mimeType"] = "text/css"
+    metadata["enabled"] = True
 
     d = dict(metadata)
-    d["objectType"] = "cssStyleSheet"
-    d["enabled"] = True
+    d["objectType"] = "textFile"
     defs.append(d)
 
 def loadModspec(name):
@@ -35,11 +51,11 @@ def loadModspec(name):
     body = f.read()
     f.close()
     metadata["bodyText"] = body
+    metadata["mimeType"] = "application/javascript"
 
     mods[metadata["name"]] = metadata
 
     d = dict(metadata)
-    d["bodyText"] = d["bodyText"]
     d["objectType"] = "moduleDefinition"
     defs.append(d)
 
@@ -58,12 +74,15 @@ def replaceMarker(marker, value):
 goal = sys.argv[1]
 modspecs = []
 stylefiles = []
+skins = []
 mode = modspecs
 for name in sys.argv[2:]:
     if name == '--styles':
         mode = stylefiles
     elif name == '--modules':
         mode = modspecs
+    elif name == '--skins':
+        mode = skins
     else:
         mode.append(name)
 
@@ -72,6 +91,9 @@ for name in stylefiles:
 
 for name in modspecs:
     loadModspec(name)
+
+for name in skins:
+    loadSkin(name)
 
 replaceMarker('__$__exported_repo__$__', '(' + json.dumps({}, indent = 2) + ')')
 replaceMarker('__$__new_instances__$__', '(' + json.dumps(defs, indent = 2) + ')')
