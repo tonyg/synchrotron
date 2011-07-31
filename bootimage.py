@@ -13,6 +13,7 @@ mods = {}
 defs = []
 
 def loadStyleFile(name):
+    sys.stderr.write("Loading CSS style file %s...\n" % (name,))
     f = file(name)
     body = f.read()
     f.close()
@@ -26,6 +27,7 @@ def loadStyleFile(name):
     defs.append(d)
 
 def loadModspec(name):
+    sys.stderr.write("Loading javascript module %s...\n" % (name,))
     f = file(name + ".modspec.js")
     metadata = json.load(f)
     f.close()
