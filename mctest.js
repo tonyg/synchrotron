@@ -87,6 +87,10 @@ Mc.Tests = {
         var repo = new Mc.Repository();
         var fs = new Mc.Checkout(repo);
 
+	fs.changeListeners.name.push(function (event) {
+	    print("CHANGE: " + uneval(event));
+	});
+
         function d(x) {
             print(x);
             //repo.emptyCaches();

@@ -140,6 +140,37 @@ Mc.Util = (function ()
 	return (colonPos != -1) && blobId.substring(colonPos + 1);
     }
 
+    var hasSetTimeout;
+    try {
+	hasSetTimeout = window.setTimeout;
+	hasSetTimeout = !!hasSetTimeout;
+    } catch (e) {
+	hasSetTimeout = false;
+    }
+    var broadcast;
+    if (hasSetTimeout) {
+	broadcast = function (receivers, event) {
+	    /* In a browser, or somewhere with an event loop. */
+	    for (var i = 0; i < receivers.length; i++) {
+		var receiver = receivers[i];
+		/* Javascript binding dance to work around mutation of outer receiver binding. */
+		setTimeout((function (receiver) {
+		    return function () {
+			receiver(event);
+		    };
+		})(receiver), 0);
+	    }
+	};
+    } else {
+	broadcast = function (receivers, event) {
+	    /* Somewhere else. Hope that our event listeners are
+	     * carefully enough written that we avoid deadlocks. */
+	    for (var i = 0; i < receivers.length; i++) {
+		receivers[i](event);
+	    }
+	};
+    }
+
     return {
 	random_uuid: random_uuid,
 	dict_union: dict_union,
@@ -151,7 +182,8 @@ Mc.Util = (function ()
 	scalarsEqual: scalarsEqual,
 	subclassResponsibility: subclassResponsibility,
 	blobIdType: blobIdType,
-	blobIdKey: blobIdKey
+	blobIdKey: blobIdKey,
+	broadcast: broadcast
     };
 })();
 
@@ -638,6 +670,12 @@ Mc.Repository.prototype.importRevisions = function (exportedData) {
 Mc.Checkout = function (repo, blobIdOrTag) {
     this.repo = repo;
 
+    this.changeListeners = {
+	inode: [],
+	name: [],
+	commit: []
+    };
+
     var tagInfo = repo.lookupTag(blobIdOrTag);
     this.activeBranch = (tagInfo && !tagInfo.isRemote) ? tagInfo.bookmarkName : null;
     this.forceCheckout(blobIdOrTag);
@@ -660,6 +698,8 @@ Mc.Checkout.prototype.forceCheckout = function (blobIdOrTag) {
 	this.directParent = undefined;
     }
     this.resetTemporaryState();
+    Mc.Util.broadcast(this.changeListeners.commit,
+		      {checkout: this, checkout: this.directParent});
 };
 
 Mc.Checkout.prototype.resetTemporaryState = function () {
@@ -724,6 +764,8 @@ Mc.Checkout.prototype.writeFile = function (fileName, instance, objectType) {
     objectType = objectType || "object";
     var inodeId = this.lookupFile(fileName, true);
     this.writeInode(inodeId, instance, objectType, this.unmodifiedInodes[inodeId]);
+    Mc.Util.broadcast(this.changeListeners.name,
+		      {checkout: this, name: fileName, kind: 'write'});
 };
 
 Mc.Checkout.prototype.writeInode = function (inodeId,
@@ -736,6 +778,7 @@ Mc.Checkout.prototype.writeInode = function (inodeId,
 			    baseId: baseId});
     this.dirtyInodes[inodeId] = {instanceIndex: (this.newInstances.length - 1)};
     this.anyDirty = true;
+    Mc.Util.broadcast(this.changeListeners.inode, {checkout: this, inode: inodeId});
 };
 
 Mc.Checkout.prototype.copyFile = function (sourceName, targetName) {
@@ -744,6 +787,9 @@ Mc.Checkout.prototype.copyFile = function (sourceName, targetName) {
     var newInodeId = this.lookupFile(targetName, true);
     this.dirtyInodes[newInodeId] = instanceLocation;
     this.anyDirty = true;
+    Mc.Util.broadcast(this.changeListeners.inode, {checkout: this, inode: newInodeId});
+    Mc.Util.broadcast(this.changeListeners.name,
+		      {checkout: this, name: targetName, kind: 'write'});
 };
 
 Mc.Checkout.prototype.renameFile = function (sourceName, targetName) {
@@ -751,6 +797,10 @@ Mc.Checkout.prototype.renameFile = function (sourceName, targetName) {
     this.names[targetName] = inodeId;
     delete this.names[sourceName];
     this.anyDirty = true;
+    Mc.Util.broadcast(this.changeListeners.name,
+		      {checkout: this, name: sourceName, kind: 'delete'});
+    Mc.Util.broadcast(this.changeListeners.name,
+		      {checkout: this, name: targetName, kind: 'write'});
 };
 
 Mc.Checkout.prototype.getInstance = function (blobId) {
@@ -778,6 +828,8 @@ Mc.Checkout.prototype.deleteFile = function (fileName) {
     if (fileName in this.names) {
 	delete this.names[fileName];
 	this.anyDirty = true;
+	Mc.Util.broadcast(this.changeListeners.name,
+			  {checkout: this, name: fileName, kind: 'delete'});
 	return true;
     } else {
 	return false;
@@ -1013,5 +1065,9 @@ Mc.Checkout.prototype.commit = function (metadata) {
     }
 
     repo.tag(this.directParent, this.activeBranch, true);
+    Mc.Util.broadcast(this.changeListeners.commit,
+		      {checkout: this, commit: this.directParent});
+    Mc.Util.broadcast(this.changeListeners.commit,
+		      {checkout: this, checkout: this.directParent});
     return this.directParent;
 };
