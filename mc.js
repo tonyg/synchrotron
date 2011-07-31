@@ -25,7 +25,7 @@ var Mc = {
     _debugMode: false
 };
 
-Mc.Util = (function()
+Mc.Util = (function ()
 {
     function random_hex_string(n) {
         var digits = "0123456789abcdef";
@@ -219,7 +219,7 @@ Mc.ObjectTypes = {
 	    if (p === null) return v0;
 	    return p.replacement;
 	},
-	merge: function(v1, v0, v2) {
+	merge: function (v1, v0, v2) {
 	    if (v1 == v2) return {objectType: "scalar", ok: v1};
 	    if (v1 == v0) return {objectType: "scalar", ok: v2};
 	    if (v2 == v0) return {objectType: "scalar", ok: v1};
@@ -237,7 +237,7 @@ Mc.ObjectTypes = {
 	    if (p === null) return v0;
 	    return Diff.patch(v0, p);
 	},
-	merge: function(v1, v0, v2) {
+	merge: function (v1, v0, v2) {
 	    var mergeResult = Diff.diff3_merge(v1, v0, v2, true);
 	    if (mergeResult.length == 1 && ("ok" in mergeResult[0])) {
 		return {objectType: "text", ok: mergeResult[0].ok};
@@ -256,7 +256,7 @@ Mc.ObjectTypes = {
 	    if (p === null) return v0;
 	    return Mc.ObjectTypes.simpleText.patch(v0.split('\n'), p).join('\n');
 	},
-	merge: function(v1, v0, v2) {
+	merge: function (v1, v0, v2) {
 	    return Mc.ObjectTypes.simpleText.merge(v1.split('\n'), v0.split('\n'), v2.split('\n'));
 	}
     },
@@ -379,7 +379,7 @@ Mc.TypeDirectory = {
     "index": Mc.ObjectTypes.basicIndex
 };
 
-Mc.lookupType = function(typeName) {
+Mc.lookupType = function (typeName) {
     var t = Mc.TypeDirectory[typeName];
     if (!t) {
 	throw {message: "ObjectType not found",
@@ -431,11 +431,11 @@ Mc.Repository = function() {
     checkout.commit();
 };
 
-Mc.Repository.prototype.emptyCaches = function() {
+Mc.Repository.prototype.emptyCaches = function () {
     this.cache = {}; // blobId -> unpickledInstance
 };
 
-Mc.Repository.prototype.lookupTag = function(tagOrBranch) {
+Mc.Repository.prototype.lookupTag = function (tagOrBranch) {
     if (!tagOrBranch) {
 	tagOrBranch = "master";
     }
@@ -472,7 +472,7 @@ Mc.Repository.prototype.lookupTag = function(tagOrBranch) {
     }
 };
 
-Mc.Repository.prototype.prettyTag = function(fullTag) {
+Mc.Repository.prototype.prettyTag = function (fullTag) {
     var pieces = fullTag.split("/");
     if (pieces[0] == this.repoId) {
 	return pieces[1];
@@ -486,7 +486,7 @@ Mc.Repository.prototype.prettyTag = function(fullTag) {
     }
 };
 
-Mc.Repository.prototype.resolve = function(blobIdOrTag) {
+Mc.Repository.prototype.resolve = function (blobIdOrTag) {
     if (Mc.Util.blobIdKey(blobIdOrTag) in this.blobs) {
 	return blobIdOrTag;
     } else {
@@ -495,7 +495,7 @@ Mc.Repository.prototype.resolve = function(blobIdOrTag) {
     }
 };
 
-Mc.Repository.prototype.maybeResolve = function(blobIdOrTag, shouldResolve) {
+Mc.Repository.prototype.maybeResolve = function (blobIdOrTag, shouldResolve) {
     // shouldResolve is an optional parameter defaulting to true,
     // hence the odd test in the line below
     var resolved = (shouldResolve !== false) ? this.resolve(blobIdOrTag) : blobIdOrTag;
@@ -503,10 +503,9 @@ Mc.Repository.prototype.maybeResolve = function(blobIdOrTag, shouldResolve) {
     return resolved;
 };
 
-Mc.Repository.prototype.store = function(instance, // a picklable object
-					 objectType, // a key into Mc.TypeDirectory
-					 directParent,
-					 additionalParent)
+Mc.Repository.prototype.store = function (instance, // a picklable object
+					  objectType, // a key into Mc.TypeDirectory
+					  baseId)
 {
     var t = Mc.lookupType(objectType);
     var entry = {directParent: directParent, additionalParent: additionalParent};
@@ -643,11 +642,11 @@ Mc.Repository.prototype.merge3 = function (b1, b0, b2) {
     return result;
 };
 
-Mc.Repository.prototype.tag = function(blobId, tagName, isBranch) {
+Mc.Repository.prototype.tag = function (blobId, tagName, isBranch) {
     this.tags[this.repoId + "/" + tagName] = {blobId: blobId, isBranch: isBranch || false};
 };
 
-Mc.Repository.prototype.allBranches = function() {
+Mc.Repository.prototype.allBranches = function () {
     var result = {};
     for (var tag in this.tags) {
 	if (this.tags[tag].isBranch) {
@@ -657,14 +656,14 @@ Mc.Repository.prototype.allBranches = function() {
     return result;
 };
 
-Mc.Repository.prototype.exportRevisions = function() {
+Mc.Repository.prototype.exportRevisions = function () {
     return {repoId: this.repoId,
 	    blobs: this.blobs,
 	    tags: this.tags,
 	    remotes: this.remotes};
 };
 
-Mc.Repository.prototype.importRevisions = function(exportedData) {
+Mc.Repository.prototype.importRevisions = function (exportedData) {
     for (var blobId in exportedData.blobs) {
 	if (!(blobId in this.blobs)) {
 	    this.blobs[blobId] = exportedData.blobs[blobId];
@@ -677,7 +676,7 @@ Mc.Repository.prototype.importRevisions = function(exportedData) {
     }
 };
 
-Mc.Checkout = function(repo, blobIdOrTag) {
+Mc.Checkout = function (repo, blobIdOrTag) {
     this.repo = repo;
 
     var tagInfo = repo.lookupTag(blobIdOrTag);
@@ -700,7 +699,7 @@ Mc.Checkout.prototype.forceCheckout = function (blobIdOrTag) {
     this.resetTemporaryState();
 };
 
-Mc.Checkout.prototype.resetTemporaryState = function() {
+Mc.Checkout.prototype.resetTemporaryState = function () {
     this.unmodifiedInodes = Mc.Util.deepCopy(this.inodes);
     this.newInstances = []; // list of {instance:, objectType:, directParent:, additionalParent:}
     this.dirtyInodes = {}; // inodeId -> ({instanceIndex:instanceIndex} | {blobId:blobId})
@@ -709,13 +708,13 @@ Mc.Checkout.prototype.resetTemporaryState = function() {
     this.additionalParent = undefined;
 };
 
-Mc.Checkout.prototype.ensureClean = function(what) {
+Mc.Checkout.prototype.ensureClean = function (what) {
     if (this.anyDirty) {
 	throw {message: ("Cannot "+what+" dirty checkout")};
     }
 };
 
-Mc.Checkout.prototype.tag = function(tagName, force, isBranch) {
+Mc.Checkout.prototype.tag = function (tagName, force, isBranch) {
     var existing = this.repo.lookupTag(tagName);
     if (existing && !force) {
 	return false;
@@ -728,7 +727,7 @@ Mc.Checkout.prototype.tag = function(tagName, force, isBranch) {
     }
 };
 
-Mc.Checkout.prototype.lookupFile = function(fileName, createIfAbsent) {
+Mc.Checkout.prototype.lookupFile = function (fileName, createIfAbsent) {
     if (fileName in this.names) {
 	return this.names[fileName];
     } else {
@@ -745,7 +744,7 @@ Mc.Checkout.prototype.lookupFile = function(fileName, createIfAbsent) {
     }
 };
 
-Mc.Checkout.prototype.resolveInode = function(inodeId) {
+Mc.Checkout.prototype.resolveInode = function (inodeId) {
     if (inodeId in this.dirtyInodes) {
 	return this.dirtyInodes[inodeId];
     }
@@ -755,17 +754,16 @@ Mc.Checkout.prototype.resolveInode = function(inodeId) {
     throw {message: "Internal error: missing inode", inodeId: inodeId};
 };
 
-Mc.Checkout.prototype.writeFile = function(fileName, instance, objectType) {
+Mc.Checkout.prototype.writeFile = function (fileName, instance, objectType) {
     objectType = objectType || "object";
     var inodeId = this.lookupFile(fileName, true);
     this.writeInode(inodeId, instance, objectType, this.unmodifiedInodes[inodeId]);
 };
 
-Mc.Checkout.prototype.writeInode = function(inodeId,
-					    instance,
-					    objectType,
-					    directParent,
-					    additionalParent)
+Mc.Checkout.prototype.writeInode = function (inodeId,
+					     instance,
+					     objectType,
+					     baseId)
 {
     this.newInstances.push({instance: Mc.Util.deepCopy(instance),
 			    objectType: objectType,
@@ -775,7 +773,7 @@ Mc.Checkout.prototype.writeInode = function(inodeId,
     this.anyDirty = true;
 };
 
-Mc.Checkout.prototype.copyFile = function(sourceName, targetName) {
+Mc.Checkout.prototype.copyFile = function (sourceName, targetName) {
     var inodeId = this.lookupFile(sourceName);
     var instanceLocation = this.resolveInode(inodeId);
     var newInodeId = this.lookupFile(targetName, true);
@@ -783,14 +781,14 @@ Mc.Checkout.prototype.copyFile = function(sourceName, targetName) {
     this.anyDirty = true;
 };
 
-Mc.Checkout.prototype.renameFile = function(sourceName, targetName) {
+Mc.Checkout.prototype.renameFile = function (sourceName, targetName) {
     var inodeId = this.lookupFile(sourceName);
     this.names[targetName] = inodeId;
     delete this.names[sourceName];
     this.anyDirty = true;
 };
 
-Mc.Checkout.prototype.getInstance = function(blobId) {
+Mc.Checkout.prototype.getInstance = function (blobId) {
     var instance = this.repo.lookup(blobId, false);
     if (!instance) {
 	throw {message: "Missing blob", blobId: blobId};
@@ -798,7 +796,7 @@ Mc.Checkout.prototype.getInstance = function(blobId) {
     return instance;
 };
 
-Mc.Checkout.prototype.readFile = function(fileName) {
+Mc.Checkout.prototype.readFile = function (fileName) {
     var inodeId = this.lookupFile(fileName);
     var instanceLocation = this.resolveInode(inodeId);
     var result;
@@ -811,7 +809,7 @@ Mc.Checkout.prototype.readFile = function(fileName) {
     return Mc.Util.deepCopy(result);
 };
 
-Mc.Checkout.prototype.deleteFile = function(fileName) {
+Mc.Checkout.prototype.deleteFile = function (fileName) {
     if (fileName in this.names) {
 	delete this.names[fileName];
 	this.anyDirty = true;
@@ -821,11 +819,11 @@ Mc.Checkout.prototype.deleteFile = function(fileName) {
     }
 };
 
-Mc.Checkout.prototype.fileExists = function(fileName) {
+Mc.Checkout.prototype.fileExists = function (fileName) {
     return (fileName in this.names);
 };
 
-Mc.Checkout.prototype.forEachFile = function(f) {
+Mc.Checkout.prototype.forEachFile = function (f) {
     for (var name in this.names) {
 	var inodeId = this.names[name];
 	f(name, inodeId, inodeId in this.dirtyInodes);
@@ -855,7 +853,7 @@ Mc.Checkout.prototype.forEachFileOfType = function (typeNameOrFilter, f) {
     }
 };
 
-Mc.Checkout.prototype.isDirty = function() {
+Mc.Checkout.prototype.isDirty = function () {
     return this.anyDirty;
 };
 
