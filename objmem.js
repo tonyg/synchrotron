@@ -155,7 +155,8 @@ function saveImageAs(path) {
 	var parts = splitAtMarker(content, marker);
 	accumulator.push(parts[0]);
 	var j = noStringify ? value : '('+JSON.stringify(value, null, 2)+')';
-	j = j.replace('</script>', '</scr"+"ipt>', 'g'); // TODO: case-insensitive
+	j = j.replace(/<\/script>/gi,
+		      function (match) { return match.substring(0,5)+'"+"'+match.substring(5); });
 	accumulator.push(j);
 	content = parts[1];
     }
