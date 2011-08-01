@@ -673,6 +673,7 @@ Mc.Checkout = function (repo, blobIdOrTag) {
     this.repo = repo;
 
     this.changeListeners = {
+	dirty: [],
 	inode: [],
 	name: [],
 	commit: []
@@ -709,8 +710,13 @@ Mc.Checkout.prototype.resetTemporaryState = function () {
     this.newInstances = []; // list of {instance:, objectType:, baseId:}
     this.dirtyInodes = {}; // inodeId -> ({instanceIndex:instanceIndex} | {blobId:blobId})
     this.conflicts = null;
-    this.anyDirty = false;
+    this.setDirty(false);
     this.additionalParent = undefined;
+};
+
+Mc.Checkout.prototype.setDirty = function (newValue) {
+    this.anyDirty = newValue;
+    Mc.Util.broadcast(this.changeListeners.dirty, {dirty: newValue});
 };
 
 Mc.Checkout.prototype.ensureClean = function (what) {
@@ -744,7 +750,7 @@ Mc.Checkout.prototype.lookupFile = function (fileName, createIfAbsent) {
 	    var newInodeId = Mc.Util.random_uuid();
 	    if (Mc._debugMode) { newInodeId = "inode-" + newInodeId; }
 	    this.names[fileName] = newInodeId;
-	    this.anyDirty = true;
+	    this.setDirty(true);
 	    return newInodeId;
 	} else {
 	    throw {message: "File not found", fileName: fileName};
@@ -779,7 +785,7 @@ Mc.Checkout.prototype.writeInode = function (inodeId,
 			    objectType: objectType,
 			    baseId: baseId});
     this.dirtyInodes[inodeId] = {instanceIndex: (this.newInstances.length - 1)};
-    this.anyDirty = true;
+    this.setDirty(true);
     Mc.Util.broadcast(this.changeListeners.inode, {checkout: this, inode: inodeId});
 };
 
@@ -788,7 +794,7 @@ Mc.Checkout.prototype.copyFile = function (sourceName, targetName) {
     var instanceLocation = this.resolveInode(inodeId);
     var newInodeId = this.lookupFile(targetName, true);
     this.dirtyInodes[newInodeId] = instanceLocation;
-    this.anyDirty = true;
+    this.setDirty(true);
     Mc.Util.broadcast(this.changeListeners.inode, {checkout: this, inode: newInodeId});
     Mc.Util.broadcast(this.changeListeners.name,
 		      {checkout: this, name: targetName, kind: 'write'});
@@ -798,7 +804,7 @@ Mc.Checkout.prototype.renameFile = function (sourceName, targetName) {
     var inodeId = this.lookupFile(sourceName);
     this.names[targetName] = inodeId;
     delete this.names[sourceName];
-    this.anyDirty = true;
+    this.setDirty(true);
     Mc.Util.broadcast(this.changeListeners.name,
 		      {checkout: this, name: sourceName, kind: 'delete'});
     Mc.Util.broadcast(this.changeListeners.name,
@@ -829,7 +835,7 @@ Mc.Checkout.prototype.readFile = function (fileName) {
 Mc.Checkout.prototype.deleteFile = function (fileName) {
     if (fileName in this.names) {
 	delete this.names[fileName];
-	this.anyDirty = true;
+	this.setDirty(true);
 	Mc.Util.broadcast(this.changeListeners.name,
 			  {checkout: this, name: fileName, kind: 'delete'});
 	return true;
@@ -1011,7 +1017,7 @@ Mc.Checkout.prototype.merge = function (otherBlobIdOrTag) {
 
     this.conflicts = haveConflicts ? conflicts : null;
     this.additionalParent = b2;
-    this.anyDirty = true;
+    this.setDirty(true);
     return true;
 };
 
