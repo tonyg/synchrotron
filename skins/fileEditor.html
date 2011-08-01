@@ -1,0 +1,8 @@
+<div data-bind="visible: selectedFilename()">
+  <button class="float-right"
+	  data-bind="visible: editorChanged(), click: revertEdits">Revert</button>
+  <button class="float-right"
+	  data-bind="visible: editorChanged(), click: saveEdits">Save</button>
+  <h1 data-bind="text: selectedFilename()"></h1>
+  <div id="fileEditorDiv"></div>
+</div>

@@ -1,5 +1,9 @@
 body {
-    font-family: 'Mako', Georgia;
+    /* font-family: 'Mako', Georgia; */
+}
+
+.float-right {
+    float: right;
 }
 
 /* Override codemirror's defaults. */

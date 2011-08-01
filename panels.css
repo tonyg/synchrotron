@@ -1,5 +1,6 @@
 .panels.container { border: solid black 1px; }
 .panels.clear { clear: both; }
-.panels.left { float: left; }
-.panels.right { float: right; }
+.panels.left { float: left; width: 25%; }
+.panels.right { float: right; width: 25% }
+.panels.body { float: left; width: 49%; }
 .panels.bottom { clear: both; }

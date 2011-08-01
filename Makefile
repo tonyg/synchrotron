@@ -2,7 +2,7 @@ INDEX_MODFILES=\
 	demomod io jquery-1.6.2.min \
 	module boot_new boot_old \
 	sha1 objmem mc diff json2 graph showdown \
-	panels knockout-1.2.1.debug \
+	panels knockout-1.2.1.debug mustache \
 	codemirror codemirror-javascript
 INDEX_STYLES=\
 	synchrotron.css panels.css \
@@ -19,7 +19,7 @@ all: index.html
 clean:
 	rm -f index.html testIndex-*.html
 
-index.html: bootimage.py $(INDEX_MODSOURCES) $(INDEX_MODSPECS) $(INDEX_STYLES)
+index.html: bootimage.py $(INDEX_MODSOURCES) $(INDEX_MODSPECS) $(INDEX_STYLES) $(INDEX_SKINS)
 	./bootimage.py $(INDEX_BOOTMOD) \
 		--skins $(INDEX_SKINS) \
 		--styles $(INDEX_STYLES) \
