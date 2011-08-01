@@ -536,20 +536,22 @@ Mc.Repository.prototype.store = function (instance, // a picklable object
     var blobId = SHA1.hex_sha1(SHA1.encode_utf8(jsonText));
     if (Mc._debugMode) { blobId = "blob-" + blobId.substring(0, 8); }
 
-    var entry;
-    if (baseId) {
-	var differ = Mc.typeMethod(t, "diff");
-	var diffJson = differ(Mc.validInstance(t, this.lookupUnsafe(baseId)), instance);
-	if (diffJson === null) {
-	    // No changes to the data? Then claim we're identical to
-	    // our base object.
-	    return objectType + ":" + Mc.Util.blobIdKey(baseId);
+    if (!(blobId in this.blobs)) {
+	var entry;
+	if (baseId) {
+	    var differ = Mc.typeMethod(t, "diff");
+	    var diffJson = differ(Mc.validInstance(t, this.lookupUnsafe(baseId)), instance);
+	    if (diffJson === null) {
+		// No changes to the data? Then claim we're identical to
+		// our base object.
+		return objectType + ":" + Mc.Util.blobIdKey(baseId);
+	    }
+	    entry = {baseId: baseId, diff: JSON.stringify(diffJson)};
+	} else {
+	    entry = {full: jsonText};
 	}
-	entry = {baseId: baseId, diff: JSON.stringify(diffJson)};
-    } else {
-	entry = {full: jsonText};
+	this.blobs[blobId] = entry;
     }
-    this.blobs[blobId] = entry;
 
     return objectType + ":" + blobId;
 };
