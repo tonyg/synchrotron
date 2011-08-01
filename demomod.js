@@ -81,7 +81,6 @@ function main() {
     Boot.module_namespace.instantiateModule('foo');
 
     //ObjectMemory.saveImageAs(filename);
-    ObjectMemory.saveImage();
 
     $("body").append($((new Showdown.converter()).makeHtml("Done!")));
 
