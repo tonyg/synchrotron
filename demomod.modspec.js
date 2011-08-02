@@ -7,6 +7,7 @@
 		"net.attacklab.Showdown",
 		"net.lshift.synchrotron.Boot",
 		"net.lshift.synchrotron.Mc",
+		"net.lshift.synchrotron.RenderRepo",
 		"net.lshift.synchrotron.ObjectMemory"],
     "exports": []
 }

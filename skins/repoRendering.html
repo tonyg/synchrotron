@@ -1,0 +1,1 @@
+<span data-bind="click: (function () { setSelectedRevision(revId) })">{{#pictures}}<img src="{{url}}">{{/pictures}} <span data-bind="style: {background: selectedRevision() == revId ? 'darkgreen' : 'white', color: selectedRevision() == revId ? 'white' : 'black'}">{{summary}}<br></span>

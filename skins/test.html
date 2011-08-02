@@ -3,6 +3,10 @@
     <span data-bind="visible: checkoutDirty()">has unsaved changes.</span>
     <span data-bind="visible: !checkoutDirty()">is committed.</span>
   </p>
+  <div style="line-height: 0px; white-space: nowrap;"
+       data-bind="template: {name: 'repoRendering', foreach: repoRendering(),
+		  templateOptions: {selectedRevision: selectedRevision,
+		                    setSelectedRevision: setSelectedRevision}}"></div>
   <ul data-bind="template: {name: 'testFileList', foreach: fileList(),
 		 templateOptions: {selectedFilename: setSelectedFilename}}"></ul>
 </div>

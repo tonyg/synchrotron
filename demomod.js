@@ -1,16 +1,29 @@
 $(document).ready(main);
 
+function confirmNoOutstandingEdits() {
+    return !viewModel.editorChanged() || confirm("Lose changes currently in editor?");
+}
+
+function confirmNoUncommitedWrites() {
+    return !viewModel.checkoutDirty() || confirm("Lose uncommited changes currently in checkout?");
+}
+
 var viewModel = {
     checkoutDirty: ko.observable(false),
     fileList: ko.observableArray(),
-    fileListSet: {},
+    fileListSet: null,
     selectedFilename: ko.observable(null),
     editorChanged: ko.observable(false),
     setSelectedFilename: function (newFilename) {
-	if (viewModel.editorChanged()) {
-	    if (!confirm("Lose changes currently in editor?")) return;
-	}
+	if (!confirmNoOutstandingEdits()) return;
 	viewModel.selectedFilename(newFilename);
+    },
+    repoRendering: ko.observable([]),
+    selectedRevision: ko.observable(null),
+    setSelectedRevision: function (newRevision) {
+	if (!confirmNoOutstandingEdits()) return;
+	if (!confirmNoUncommitedWrites()) return;
+	ObjectMemory.checkout.forceCheckout(newRevision);
     }
 };
 
@@ -22,7 +35,12 @@ viewModel.commitRepository = function () {
 viewModel.selectedFile = ko.dependentObservable(function () {
     var filename = viewModel.selectedFilename();
     if (!filename) return null;
-    return ObjectMemory.checkout.readFile(filename);
+    viewModel.selectedRevision(); // Dummy read of an observable to make us refresh when it changes
+    try {
+	return ObjectMemory.checkout.readFile(filename);
+    } catch (e) {
+	return null;
+    }
 });
 
 viewModel.activeEditor = ko.dependentObservable(function () {
@@ -97,17 +115,51 @@ function main() {
 	}, 1000);
     }, 1000);
 
-    var initialFileNames = [];
-    c.forEachFile(function (name) {
-	viewModel.fileListSet[name] = true;
-	initialFileNames.push(name);
-    });
-    initialFileNames.sort();
-    viewModel.fileList(initialFileNames);
-
     c.changeListeners.dirty.push(function (event) {
 	viewModel.checkoutDirty(event.dirty);
     });
+
+    function resetFileList() {
+	var initialFileNames = [];
+	viewModel.fileListSet = {};
+	c.forEachFile(function (name) {
+	    viewModel.fileListSet[name] = true;
+	    initialFileNames.push(name);
+	});
+	initialFileNames.sort();
+	viewModel.fileList(initialFileNames);
+    }
+
+    function onCommitUpdateRendering(event) {
+	viewModel.selectedRevision(event.commit);
+	resetFileList();
+
+	var wrappedRepo = RenderRepo.wrapRepo(ObjectMemory.repo);
+	var rawRendering = RenderRepo.renderRepository(wrappedRepo);
+
+	var cookedRendering = [];
+	for (var i = 0; i < rawRendering.length; i++) {
+	    var rawEntry = rawRendering[i];
+	    var commit = ObjectMemory.repo.lookup(rawEntry.revId);
+	    var metadata = commit.metadata || {};
+	    var summary = metadata.summary || "(no summary)";
+	    var cookedEntry = {
+		revId: rawEntry.revId,
+		commit: commit,
+		summary: summary,
+		pictures: []
+	    };
+	    for (var j = 0; j < rawEntry.pictures.length; j++) {
+		var pictureName = rawEntry.pictures[j];
+		var pictureUrl = RenderRepo.images[pictureName];
+		cookedEntry.pictures.push({url: pictureUrl});
+	    }
+	    cookedRendering.push(cookedEntry);
+	}
+	viewModel.repoRendering(cookedRendering);
+    }
+    c.changeListeners.commit.push(onCommitUpdateRendering);
+    onCommitUpdateRendering({checkout: c, newCommit: false, commit: c.directParent});
 
     c.changeListeners.name.push(function (event) {
 	switch (event.kind) {

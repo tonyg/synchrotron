@@ -156,7 +156,12 @@ Mc.Util = (function ()
 		/* Javascript binding dance to work around mutation of outer receiver binding. */
 		setTimeout((function (receiver) {
 		    return function () {
-			receiver(event);
+			try {
+			    receiver(event);
+			} catch (e) {
+			    alert("Exception in broadcast event handler: " +
+				  JSON.stringify(e));
+			}
 		    };
 		})(receiver), 0);
 	    }
@@ -702,7 +707,7 @@ Mc.Checkout.prototype.forceCheckout = function (blobIdOrTag) {
     }
     this.resetTemporaryState();
     Mc.Util.broadcast(this.changeListeners.commit,
-		      {checkout: this, checkout: this.directParent});
+		      {checkout: this, newCommit: false, commit: this.directParent});
 };
 
 Mc.Checkout.prototype.resetTemporaryState = function () {
@@ -1074,8 +1079,6 @@ Mc.Checkout.prototype.commit = function (metadata) {
 
     repo.tag(this.directParent, this.activeBranch, true);
     Mc.Util.broadcast(this.changeListeners.commit,
-		      {checkout: this, commit: this.directParent});
-    Mc.Util.broadcast(this.changeListeners.commit,
-		      {checkout: this, checkout: this.directParent});
+		      {checkout: this, newCommit: true, commit: this.directParent});
     return this.directParent;
 };
