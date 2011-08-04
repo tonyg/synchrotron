@@ -688,13 +688,26 @@ Mc.Checkout = function (repo, blobIdOrTag) {
 	commit: []
     };
 
+    this.reflog = [];; // list of pairs [blobId, explanationObject], oldest entry first
+    this.reflogLimit = 100; // once reflog grows longer than this, oldest entries are pruned
+
     var tagInfo = repo.lookupTag(blobIdOrTag);
     this.activeBranch = (tagInfo && !tagInfo.isRemote) ? tagInfo.bookmarkName : null;
     this.forceCheckout(blobIdOrTag);
 };
 
+Mc.Checkout.prototype.reflogInsert = function (blobId, explanationObject) {
+    if (this.reflog.length >= this.reflogLimit) {
+	this.reflog.shift();
+    }
+    this.reflog.push([blobId, explanationObject]);
+};
+
 Mc.Checkout.prototype.forceCheckout = function (blobIdOrTag) {
     var resolved = this.repo.resolve(blobIdOrTag);
+    this.reflogInsert(this.directParent, {type: "forceCheckout",
+					  blobIdOrTag: blobIdOrTag,
+					  newBlobId: resolved});
     var commit = this.repo.lookup(resolved, false);
     if (commit) {
 	var index = this.repo.lookup(commit.value);
@@ -741,6 +754,11 @@ Mc.Checkout.prototype.tag = function (tagName, force, isBranch) {
     } else {
 	if (!this.directParent) {
 	    throw {message: "Cannot tag checkout with no parent commit"};
+	}
+	if (existing) {
+	    this.reflogInsert(existing.blobId, {type: "tagMoved",
+						tagInfo: existing,
+						newBlobId: this.directParent});
 	}
 	this.repo.tag(this.directParent, tagName, isBranch || false);
 	if (isBranch) {
@@ -1081,6 +1099,12 @@ Mc.Checkout.prototype.commit = function (metadata) {
 	this.directParent = commitId;
     }
 
+    var oldTagInfo = repo.lookupTag(this.activeBranch);
+    if (oldTagInfo) {
+	this.reflogInsert(oldTagInfo.blobId, {type: "tagMoved",
+					      tagInfo: oldTagInfo,
+					      newBlobId: this.directParent});
+    }
     repo.tag(this.directParent, this.activeBranch, true);
     Mc.Util.broadcast(this.changeListeners.commit,
 		      {checkout: this, newCommit: true, commit: this.directParent});
