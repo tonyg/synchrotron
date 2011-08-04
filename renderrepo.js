@@ -20,7 +20,7 @@
 // CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-function wrapRepo(repo) {
+function wrapRepo(repo, checkout) {
     var children = {};
     var branches = {};
     function recordChild(parentId, childId) {
@@ -39,15 +39,30 @@ function wrapRepo(repo) {
 	    for (var i = 0; i < entry.parents.length; i++) {
 		traceBranch(branchName, entry.parents[i]);
 	    }
-	    recordBranch(blobId, branchName);
 	    for (var i = 0; i < entry.parents.length; i++) {
 		recordChild(entry.parents[i], blobId);
 	    }
 	}
     }
+    function traceBranchRoot(branchName, blobId) {
+	recordBranch(blobId, branchName);
+	traceBranch(branchName, blobId);
+    }
     var allBranches = repo.allBranches();
     for (var tag in allBranches) {
-	traceBranch(repo.prettyTag(tag), allBranches[tag]);
+	traceBranchRoot(repo.prettyTag(tag), allBranches[tag]);
+    }
+    for (var i = 0; i < checkout.reflog.length; i++) {
+	var reflogBlobId = checkout.reflog[i][0];
+	var reflogExplanation = checkout.reflog[i][1];
+	if (reflogBlobId
+	    && (reflogExplanation.type === "tagMoved")
+	    && !reflogExplanation.tagInfo.isRemote)
+	{
+	    var pseudoBranchName = reflogExplanation.tagInfo.tag + "@" + i;
+	    allBranches[pseudoBranchName] = reflogBlobId;
+	    traceBranchRoot(repo.prettyTag(pseudoBranchName), reflogBlobId);
+	}
     }
 
     var repoWrapper = {
@@ -69,7 +84,7 @@ function wrapRepo(repo) {
 	},
 	lookupRev: function(blobId) {
 	    return {
-		branch: Mc.Util.dict_to_set_list(branches[blobId]).join(","),
+		branches: Mc.Util.dict_to_set_list(branches[blobId]),
 		metadata: repo.lookup(blobId).metadata
 	    };
 	}
@@ -204,7 +219,8 @@ function simpleRenderRepository(repo) {
         for (var j = 0; j < pictures.length; j++) {
             html = html + "<img src='img/" + pictures[j] + "' />";
         }
-        html = html+" "+item.revId+" ("+rev.branch+") "+(rev.metadata||{}).summary+"<br />\n";
+        html = html+" "+item.revId+" ("+rev.branch.join(",")+") "+
+	    (rev.metadata||{}).summary+"<br />\n";
     }
     return "<p style='line-height: 0px; white-space: nowrap;'>" + html + "</p>";
 }

@@ -8,6 +8,7 @@
 		"net.lshift.synchrotron.Boot",
 		"net.lshift.synchrotron.Mc",
 		"net.lshift.synchrotron.RenderRepo",
+		"org.JSON",
 		"net.lshift.synchrotron.ObjectMemory"],
     "exports": []
 }

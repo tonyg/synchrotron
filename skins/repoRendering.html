@@ -1,1 +1,10 @@
-<span data-bind="click: (function () { setSelectedRevision(revId) })">{{#pictures}}<img src="{{url}}">{{/pictures}} <span data-bind="style: {background: selectedRevision() == revId ? 'darkgreen' : 'white', color: selectedRevision() == revId ? 'white' : 'black'}">{{summary}}<br></span>
+<span data-bind="click: (function () { setSelectedRevision(revId) })">{{#pictures}}<img src="{{url}}">{{/pictures}} <span data-bind="style: {background: selectedRevision() == revId ? 'darkgreen' : otherParent() == revId ? 'darkred' : 'white', color: selectedRevision() == revId ? 'white' : 'black'}">{{summary}}</span>
+<span class="repo-branches">
+{{#branches}}
+{{branch}}
+{{/branches}}
+</span>
+{{#canMerge}}
+<button style="font-size: 90%; height: 1em;" data-bind="click: mergeClicked">&nbsp;</button>
+{{/canMerge}}
+<br></span>

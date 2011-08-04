@@ -1,3 +1,4 @@
 <button class="float-right"
-	data-bind="visible: checkoutDirty(), click: commitRepository">Commit</button>
+	data-bind="visible: checkoutDirty() && !conflicts(),
+		   click: commitRepository">Commit</button>
 <h1>Demo</h1>

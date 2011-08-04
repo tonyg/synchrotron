@@ -20,6 +20,8 @@ var viewModel = {
     },
     repoRendering: ko.observable([]),
     selectedRevision: ko.observable(null),
+    otherParent: ko.observable(null),
+    conflicts: ko.observable(null),
     setSelectedRevision: function (newRevision) {
 	if (!confirmNoOutstandingEdits()) return;
 	if (!confirmNoUncommitedWrites()) return;
@@ -132,23 +134,44 @@ function main() {
 
     function onCommitUpdateRendering(event) {
 	viewModel.selectedRevision(event.commit);
+	viewModel.otherParent(null);
+	viewModel.conflicts(null);
 	resetFileList();
 
-	var wrappedRepo = RenderRepo.wrapRepo(ObjectMemory.repo);
+	var wrappedRepo = RenderRepo.wrapRepo(ObjectMemory.repo,
+					      ObjectMemory.checkout);
 	var rawRendering = RenderRepo.renderRepository(wrappedRepo);
 
 	var cookedRendering = [];
 	for (var i = 0; i < rawRendering.length; i++) {
 	    var rawEntry = rawRendering[i];
-	    var commit = ObjectMemory.repo.lookup(rawEntry.revId);
+	    var revId = rawEntry.revId;
+	    var commit = ObjectMemory.repo.lookup(revId);
 	    var metadata = commit.metadata || {};
 	    var summary = metadata.summary || "(no summary)";
+	    var branchNames = wrappedRepo.lookupRev(revId).branches;
 	    var cookedEntry = {
-		revId: rawEntry.revId,
+		revId: revId,
 		commit: commit,
+		canMerge: ObjectMemory.checkout.canMerge(revId)
+		    ? {mergeClicked: (function (revId) {
+			// Javascript's hideous mutated variables bites again
+			return function (event) {
+			    console.log(ObjectMemory.checkout.merge(revId));
+			    viewModel.otherParent(revId);
+			    viewModel.conflicts(JSON.stringify(ObjectMemory.checkout.conflicts,
+							       null, 2));
+			    event.stopPropagation();
+			};
+		      })(revId)}
+		    : null,
 		summary: summary,
+		branches: [],
 		pictures: []
 	    };
+	    for (var j = 0; j < branchNames.length; j++) {
+		cookedEntry.branches.push({branch: branchNames[j]});
+	    }
 	    for (var j = 0; j < rawEntry.pictures.length; j++) {
 		var pictureName = rawEntry.pictures[j];
 		var pictureUrl = RenderRepo.images[pictureName];
