@@ -463,11 +463,10 @@ Mc.Repository.prototype.emptyCaches = function () {
     this.cache = {}; // blobId -> unpickledInstance
 };
 
-Mc.Repository.prototype.lookupTag = function (tagOrBranch) {
+Mc.Repository.prototype.expandTag = function (tagOrBranch) {
     if (!tagOrBranch) {
 	tagOrBranch = "master";
     }
-
     var slashPos = tagOrBranch.indexOf("/");
     var repoName = null;
     var repoId;
@@ -485,16 +484,21 @@ Mc.Repository.prototype.lookupTag = function (tagOrBranch) {
 	}
 	bookmarkName = tagOrBranch.substring(slashPos + 1);
     }
-
     var finalTag = repoId + "/" + bookmarkName;
-    var tagInfo = this.tags[finalTag];
+    return {tag: finalTag,
+	    repoName: repoName,
+	    isRemote: (repoName != null),
+	    repoId: repoId,
+	    bookmarkName: bookmarkName};
+};
+
+Mc.Repository.prototype.lookupTag = function (tagOrBranch) {
+    var expanded = this.expandTag(tagOrBranch);
+    var tagInfo = this.tags[expanded.tag];
     if (tagInfo) {
-	return { repoName: repoName,
-		 isRemote: (repoName != null),
-		 repoId: repoId,
-		 bookmarkName: bookmarkName,
-		 blobId: tagInfo.blobId,
-		 isBranch: tagInfo.isBranch };
+	expanded.blobId = tagInfo.blobId;
+	expanded.isBranch = tagInfo.isBranch;
+	return expanded;
     } else {
 	return null;
     }
