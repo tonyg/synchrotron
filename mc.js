@@ -899,7 +899,7 @@ Mc.Checkout.prototype.leastCommonAncestor = function (otherCommitId) {
 
 Mc.Checkout.prototype.canMerge = function (otherCommitId) {
     var ancestorBlobId = this.leastCommonAncestor(otherCommitId);
-    return !(b1 == ancestorBlobId || b2 == ancestorBlobId);
+    return !(this.directParent == ancestorBlobId || otherCommitId == ancestorBlobId);
 };
 
 Mc.Checkout.prototype.merge = function (otherBlobIdOrTag) {
