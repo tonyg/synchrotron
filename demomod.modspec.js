@@ -11,5 +11,5 @@
 		"net.lshift.synchrotron.RenderRepo",
 		"org.JSON",
 		"net.lshift.synchrotron.ObjectMemory"],
-    "exports": []
+    "exports": ["viewModel"]
 }
