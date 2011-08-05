@@ -12,6 +12,9 @@ if (__$_exported_repo.repoId) {
     cleanBlobs();
 }
 var checkout = new Mc.Checkout(repo);
+if (__$_exported_reflog) {
+    checkout.reflog = __$_exported_reflog;
+}
 
 Mc.TypeDirectory["moduleDefinition"] =
     new Mc.SimpleObjectType({ name: "",
@@ -172,6 +175,7 @@ function saveImageAs(path) {
     forceFull(repo, checkout.directParent);
 
     spliceMarker('exported_repo', repo.exportRevisions());
+    spliceMarker('exported_reflog', checkout.reflog);
     spliceMarker('new_instances', []);
     spliceMarker('boot_script',
 		 checkout.readFile("net.lshift.synchrotron.boot_old").instance.bodyText,

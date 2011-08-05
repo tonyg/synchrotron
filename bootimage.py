@@ -96,6 +96,7 @@ for name in skins:
     loadSkin(name)
 
 replaceMarker('__$__exported_repo__$__', '(' + json.dumps({}, indent = 2) + ')')
+replaceMarker('__$__exported_reflog__$__', '(' + json.dumps([], indent = 2) + ')')
 replaceMarker('__$__new_instances__$__', '(' + json.dumps(defs, indent = 2) + ')')
 replaceMarker('__$__goal__$__', '(' + json.dumps(goal, indent = 2) + ')')
 replaceMarker('__$__boot_script__$__', mods['net.lshift.synchrotron.boot_new']['bodyText'])
