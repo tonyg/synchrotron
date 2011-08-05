@@ -100,9 +100,9 @@ viewModel.importButtonClicked = function (event) {
 CodeMirror.CodeMirror.defineMIME("application/javascript", "javascript");
 
 function main() {
-    var filename = "testIndex-"+Mc.Util.random_uuid()+".html";
+    //var filename = "testIndex-"+Mc.Util.random_uuid()+".html";
     //alert(filename);
-    $("body").append($((new Showdown.converter()).makeHtml("Hello, *world*!")));
+    //$("body").append($((new Showdown.converter()).makeHtml("Hello, *world*!")));
 
     var r = ObjectMemory.repo;
     var c = ObjectMemory.checkout;
@@ -122,7 +122,7 @@ function main() {
 
     //ObjectMemory.saveImageAs(filename);
 
-    $("body").append($((new Showdown.converter()).makeHtml("Done!")));
+    //$("body").append($((new Showdown.converter()).makeHtml("Done!")));
 
     setTimeout(function () {
 	c.writeFile("bar", {bodyText: "hello"}, "textFile");
