@@ -1,4 +1,6 @@
 <button class="float-right"
+	data-bind="click: importButtonClicked">Import</button>
+<button class="float-right"
 	data-bind="visible: checkoutDirty() && !conflicts(),
 		   click: commitRepository">Commit</button>
 <h1>Demo</h1>

@@ -117,17 +117,40 @@ function getDirName() {
     return dirName.join('/');
 }
 
+function loadChangesFrom(path, repoName) {
+    var docText = FileSystem.loadFile(path);
+    var repoText = splitAtMarker(docText, 'exported_repo')[1];
+    if (!repoText) throw {message: "Could not find exported_repo text in loaded file"};
+    repoText = repoText.trim();
+    repoText =
+	repoText.replace(/<\/scr"\+"ipt>/gi,
+			 function (match) { return match.substring(0, 5) + match.substring(8); });
+    while (repoText[0] == "(") {
+	repoText = repoText.substring(1);
+    }
+    while (repoText[repoText.length - 1] == ")") {
+	repoText = repoText.substring(0, repoText.length - 1);
+    }
+    window.ttttt = repoText;
+    var exportedData = JSON.parse(repoText);
+    repo.importRevisions(exportedData);
+    repo.remotes[repoName] = {repoId: exportedData.repoId};
+    // TODO: return stats summarising the effect of the import?
+}
+
 function saveImage() {
     return saveImageAs(getLocalPath());
 }
 
 function splitAtMarker(what, marker) {
-    var pos = what.indexOf(marker + "START\n");
+    var fullMarker = '// __$__' + marker + '__$__';
+    var pos = what.indexOf(fullMarker + "START\n");
     var prefix = what.substring(0, pos);
-    what = what.substring(pos + marker.length + 6);
-    pos = what.indexOf(marker + "STOP\n");
-    var suffix = what.substring(pos + marker.length + 5);
-    return [prefix + marker + "START", "// " + marker + "STOP\n" + suffix];
+    what = what.substring(pos + fullMarker.length + 6);
+    pos = what.indexOf(fullMarker + "STOP\n");
+    var content = what.substring(0, pos);
+    var suffix = what.substring(pos + fullMarker.length + 5);
+    return [prefix + fullMarker + "START", content, fullMarker + "STOP\n" + suffix];
 }
 
 function forceFull(repo, blobId) {
@@ -154,14 +177,13 @@ function saveImageAs(path) {
     var content = originalContent;
     var accumulator = [];
     function spliceMarker(marker, value, noStringify) {
-	marker = '__$__' + marker + '__$__';
 	var parts = splitAtMarker(content, marker);
 	accumulator.push(parts[0]);
 	var j = noStringify ? value : '('+JSON.stringify(value, null, 2)+')';
 	j = j.replace(/<\/script>/gi,
 		      function (match) { return match.substring(0,5)+'"+"'+match.substring(5); });
 	accumulator.push(j);
-	content = parts[1];
+	content = parts[2];
     }
 
     var exported = repo.exportRevisions();

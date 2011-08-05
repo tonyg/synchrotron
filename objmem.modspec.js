@@ -4,6 +4,7 @@
 		"org.JSON",
 		"net.lshift.synchrotron.Mc"],
     "exports": ["repo", "checkout",
+		"loadChangesFrom",
 		"saveImage",
 		"saveImageAs"]
 }

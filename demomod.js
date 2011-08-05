@@ -79,6 +79,24 @@ viewModel.saveEdits = function () {
     viewModel.editorChanged(false);
 };
 
+viewModel.importButtonClicked = function (event) {
+    try {
+	netscape.security.PrivilegeManager.enablePrivilege("UniversalXPConnect");
+	var fp = Components.classes["@mozilla.org/filepicker;1"]
+	    .createInstance(Components.interfaces.nsIFilePicker);
+	fp.init(window, "Choose a file to import from", 0);
+	if (fp.show() == 0 && fp.file.exists()) {
+	    // OK clicked, and selected file exists.
+	    var repoName = prompt("What should the short name for this repository be?",
+				  fp.file.leafName);
+	    ObjectMemory.loadChangesFrom(fp.file.path, repoName);
+	}
+    } catch (ex) {
+	alert(ex);
+    }
+    event.stopPropagation();
+};
+
 CodeMirror.CodeMirror.defineMIME("application/javascript", "javascript");
 
 function main() {
@@ -135,7 +153,7 @@ function main() {
     }
 
     function onCommitUpdateRendering(event) {
-	viewModel.selectedRevision(event.commit);
+	viewModel.selectedRevision(c.directParent);
 	viewModel.otherParent(null);
 	viewModel.conflicts(null);
 	resetFileList();
@@ -183,6 +201,7 @@ function main() {
 	}
 	viewModel.repoRendering(cookedRendering);
     }
+    r.changeListeners.import.push(onCommitUpdateRendering);
     c.changeListeners.commit.push(onCommitUpdateRendering);
     onCommitUpdateRendering({checkout: c, newCommit: false, commit: c.directParent});
 

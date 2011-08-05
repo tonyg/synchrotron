@@ -451,6 +451,10 @@ Mc.Repository = function () {
     this.remotes = {}; // remotename -> {repoId: remote_repoId}
     this.accidentalCleanMerge = true; // set to false to disable
 
+    this.changeListeners = {
+	import: []
+    };
+
     this.emptyCaches();
 
     var checkout = new Mc.Checkout(this, null);
@@ -666,16 +670,32 @@ Mc.Repository.prototype.exportRevisions = function () {
 };
 
 Mc.Repository.prototype.importRevisions = function (exportedData) {
+    var stats = {
+	newBlobs: 0,
+	oldBlobs: 0,
+	newTags: 0
+    };
     for (var blobId in exportedData.blobs) {
 	if (!(blobId in this.blobs)) {
 	    this.blobs[blobId] = exportedData.blobs[blobId];
+	    stats.newBlobs++;
+	} else {
+	    stats.oldBlobs++;
 	}
     }
     for (var tag in exportedData.tags) {
+	// TODO: what if the exportedData has the same repoId as us?
+	// Perhaps an earlier version of ourselves. We should probably
+	// not simply stomp on our carefully-curated tags in that
+	// case!
 	if (tag.substring(0, exportedData.repoId.length) == exportedData.repoId) {
 	    this.tags[tag] = exportedData.tags[tag];
+	    stats.newTags++;
 	}
     }
+    Mc.Util.broadcast(this.changeListeners.import,
+		      {repo: this, importedFrom: exportedData.repoId, stats: stats});
+    return stats;
 };
 
 Mc.Checkout = function (repo, blobIdOrTag) {
