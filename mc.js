@@ -1,4 +1,4 @@
-// Copyright (c) 2008-2009 Tony Garnock-Jones <tonyg@lshift.net>
+// Copyright (c) 2008-2011 Tony Garnock-Jones <tonyg@lshift.net>
 // Copyright (c) 2008-2009 LShift Ltd. <query@lshift.net>
 //
 // Permission is hereby granted, free of charge, to any person

@@ -4,7 +4,7 @@ INDEX_MODFILES=\
 	sha1 objmem mc diff json2 graph showdown \
 	panels knockout-1.2.1.debug mustache \
 	codemirror codemirror-javascript \
-	renderrepo
+	renderrepo repl
 INDEX_STYLES=\
 	synchrotron.css panels.css \
 	codemirror.css codemirror-theme-default.css

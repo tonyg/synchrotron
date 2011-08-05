@@ -5,6 +5,7 @@
 		"net.codemirror.mode.Javascript",
 		"net.lshift.synchrotron.Panels",
 		"net.attacklab.Showdown",
+		"net.lshift.synchrotron.Repl",
 		"net.lshift.synchrotron.Boot",
 		"net.lshift.synchrotron.Mc",
 		"net.lshift.synchrotron.RenderRepo",
