@@ -33,6 +33,7 @@ var __$_module_namespace = null;
 	 __$_module_namespace.registerModule("net.lshift.synchrotron.Boot",
 					     {module_namespace: __$_module_namespace});
 	 __$_module_namespace.instantiateModule(__$_goal);
+	 __$_module_namespace.modules["net.lshift.synchrotron.ObjectMemory"].saveImage();
      } catch (e) {
 	 alert(uneval(e));
      }
