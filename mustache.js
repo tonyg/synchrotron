@@ -167,7 +167,11 @@ var Mustache = function() {
         case "{": // the triple mustache is unescaped
           return that.find(name, context);
 	case "@": // added by tonyg 1 August 2011: JS evaluation
-	  return eval("(function () { with(this) { return ("+name+"); } })").apply(context, []);
+	  try {
+	    return eval("(function () { with(this) { return ("+name+"); } })").apply(context, []);
+	  } catch (e) {
+	    return that.escape("<<EXCEPTION: " + e.message + ">>");
+	  }
         default: // escape the value
           return that.escape(that.find(name, context));
         }
