@@ -31,43 +31,45 @@ function boundSkin(skinName, viewModel) {
 // Based on https://gist.github.com/973973 "Zepto + Mustache + KnockoutJS starting point"
 // Uses JQuery and our repository instead of Zepto and the document's own DOM.
 ko.mustacheTemplateEngine = function () {
-    this.cache = {};
+    var $elf = this;
+
+    $elf.cache = {};
 
     ObjectMemory.checkout.changeListeners.name.push(function (event) {
 	if (event.name.substring(0, 5) === "skin:") {
-	    delete this.cache[event.name.substring(5)];
+	    delete $elf.cache[event.name.substring(5)];
 	}
     });
 
-    this['getTemplateNode'] = function (template) {
-	if (!(template in this.cache)) {
-	    this.cache[template] = { text: skin(template), isRewritten: false };
+    $elf['getTemplateNode'] = function (template) {
+	if (!(template in $elf.cache)) {
+	    $elf.cache[template] = { text: skin(template), isRewritten: false };
 	}
-	return this.cache[template];
+	return $elf.cache[template];
     }
 
-    this['renderTemplate'] = function (templateId, data, options) {
+    $elf['renderTemplate'] = function (templateId, data, options) {
         options = options || {};
 	var templateOptions = options['templateOptions'] || {};
 	var context = $.extend({$data: data}, data, templateOptions);
-        var template = this['getTemplateNode'](templateId).text,
+        var template = $elf['getTemplateNode'](templateId).text,
             html = Mustache.to_html(template, context),
             resultNodes = $(html);
         return resultNodes;
     };
 
-    this['isTemplateRewritten'] = function (templateId) {
-        return this['getTemplateNode'](templateId).isRewritten === true;
+    $elf['isTemplateRewritten'] = function (templateId) {
+        return $elf['getTemplateNode'](templateId).isRewritten === true;
     };
 
-    this['rewriteTemplate'] = function (template, rewriterCallback) {
-        var templateNode = this['getTemplateNode'](template);
+    $elf['rewriteTemplate'] = function (template, rewriterCallback) {
+        var templateNode = $elf['getTemplateNode'](template);
         var rewritten = rewriterCallback(templateNode.text);
         templateNode.text = rewritten;
         templateNode.isRewritten = true;
     };
 
-    this['createJavaScriptEvaluatorBlock'] = function (script) {
+    $elf['createJavaScriptEvaluatorBlock'] = function (script) {
 	/* This is a nonstandard extension to Mustache. */
 	return "{{@ " + script + "}}";
     };
