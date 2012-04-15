@@ -1,3 +1,5 @@
+var stylesheetIdPrefix = '__$_panel_css_';
+
 function Panel(panelContainer, title) {
     this.title = ko.observable(title);
     this.body = $('<div class="panels panel panelBody"></div>');
@@ -80,19 +82,45 @@ function installRepoTemplateEngine() {
     ko.setTemplateEngine(new ko.mustacheTemplateEngine());
 }
 
+function onFileChanged(name) {
+    var sheetId = stylesheetIdPrefix + name;
+    var sheet = ObjectMemory.checkout.readFile(name).instance;
+    if (sheet.mimeType === "text/css") {
+	if (sheet.enabled) {
+	    var s = $('#' + sheetId);
+	    if (!s.length) {
+		s = $('<style type="text/css"></style>');
+		s[0].id = sheetId;
+		$("head").append(s);
+	    }
+	    s.text(sheet.bodyText);
+	} else {
+	    $('#' + sheetId).remove();
+	}
+    }
+}
+
+function resetStylesheets() {
+    $("head style").each(function (index, e) {
+	if (e.id.substring(0, stylesheetIdPrefix.length) === stylesheetIdPrefix) {
+	    $(e).remove();
+	}
+    });
+    ObjectMemory.checkout.forEachFileOfType("textFile", onFileChanged);
+}
+
 $(document).ready(main);
 
 function main() {
-    var c = ObjectMemory.checkout;
-    c.forEachFileOfType("textFile",
-			function (name) {
-			    var sheet = c.readFile(name).instance;
-			    if (sheet.mimeType === "text/css" && sheet.enabled) {
-				var s = $('<style type="text/css"></style>');
-				s.text(sheet.bodyText);
-				$("head").append(s);
-			    }
-			});
+    resetStylesheets();
+    ObjectMemory.checkout.changeListeners.name.push(function (event) {
+	if (event.kind === 'write') {
+	    onFileChanged(event.name);
+	}
+    });
+    ObjectMemory.checkout.changeListeners.commit.push(function (event) {
+	resetStylesheets();
+    });
 
     installRepoTemplateEngine();
 
