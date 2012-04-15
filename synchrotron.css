@@ -7,7 +7,9 @@ body {
 }
 
 /* Override codemirror's defaults. */
+/*
 .CodeMirror-scroll {
     height: auto !important;
     overflow: visible !important;
 }
+*/
