@@ -6,7 +6,8 @@
   <div style="line-height: 0px; white-space: nowrap;"
        data-bind="template: {name: 'repoRendering', foreach: repoRendering(),
 		  templateOptions: {selectedRevision: selectedRevision,
-		                    otherParent: otherParent,
+		                    mergeA: mergeA,
+		                    mergeB: mergeB,
 		                    setSelectedRevision: setSelectedRevision}}"></div>
   <hr>
   <ul data-bind="template: {name: 'testFileList', foreach: fileList(),

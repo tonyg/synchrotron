@@ -22,7 +22,8 @@ var viewModel = {
     },
     repoRendering: ko.observable([]),
     selectedRevision: ko.observable(null),
-    otherParent: ko.observable(null),
+    mergeA: ko.observable(null),
+    mergeB: ko.observable(null),
     conflicts: ko.observable(null),
     setSelectedRevision: function (newRevision) {
 	if (!confirmNoOutstandingEdits()) return;
@@ -36,9 +37,17 @@ viewModel.commitRepository = function () {
     ObjectMemory.saveImage();
 };
 
+viewModel.selectedInode = ko.dependentObservable(function () {
+    var filename = viewModel.selectedFilename();
+    viewModel.selectedRevision(); // Dummy read of an observable to make us refresh when it changes
+    return ObjectMemory.checkout.names[filename];
+});
+
 viewModel.selectedFile = ko.dependentObservable(function () {
     var filename = viewModel.selectedFilename();
     if (!filename) return null;
+    var inode = viewModel.selectedInode();
+    if (!inode) return null;
     viewModel.selectedRevision(); // Dummy read of an observable to make us refresh when it changes
     try {
 	return ObjectMemory.checkout.readFile(filename);
@@ -154,7 +163,8 @@ function main() {
 
     function onCommitUpdateRendering(event) {
 	viewModel.selectedRevision(c.directParent);
-	viewModel.otherParent(null);
+	viewModel.mergeA(null);
+	viewModel.mergeB(null);
 	viewModel.conflicts(null);
 	resetFileList();
 
@@ -178,9 +188,16 @@ function main() {
 			// Javascript's hideous mutated variables bites again
 			return function (event) {
 			    console.log(ObjectMemory.checkout.merge(revId));
-			    viewModel.otherParent(revId);
-			    viewModel.conflicts(JSON.stringify(ObjectMemory.checkout.conflicts,
-							       null, 2));
+			    viewModel.selectedRevision(null);
+			    viewModel.mergeA(ObjectMemory.checkout.directParent);
+			    viewModel.mergeB(revId);
+			    var newConflicts = ObjectMemory.checkout.conflicts;
+			    if (newConflicts) {
+				viewModel.conflicts(JSON.stringify(newConflicts, null, 2));
+			    } else {
+				viewModel.conflicts(null);
+			    }
+			    resetFileList();
 			    event.stopPropagation();
 			};
 		      })(revId)}

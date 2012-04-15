@@ -63,8 +63,27 @@ function loadChangesFrom(path, repoName) {
     }
     window.ttttt = repoText;
     var exportedData = JSON.parse(repoText);
+    var shouldRemoveOldTags = false;
+    if (exportedData.repoId === repo.repoId) {
+	// We're importing from a repository that thinks it is the
+	// same as us. Since this is usually not what we want, we
+	// pretend it's some completely new repository.
+	//
+	// This is gross. TODO: what's better?
+	var oldId = exportedData.repoId;
+	var newId = Mc.Util.random_uuid();
+	var newTags = {};
+	for (var tag in exportedData.tags) {
+	    if (tag.substring(0, oldId.length) == oldId) {
+		newTags[newId + tag.substring(oldId.length)] = exportedData.tags[tag];
+	    }
+	}
+	exportedData.repoId = newId;
+	exportedData.tags = newTags;
+	shouldRemoveOldTags = true;
+    }
+    repo.addRemote(repoName, exportedData.repoId, shouldRemoveOldTags);
     repo.importRevisions(exportedData);
-    repo.remotes[repoName] = {repoId: exportedData.repoId};
     // TODO: return stats summarising the effect of the import?
 }
 

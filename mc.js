@@ -669,6 +669,22 @@ Mc.Repository.prototype.exportRevisions = function () {
 	    remotes: this.remotes};
 };
 
+Mc.Repository.prototype.addRemote = function (repoName, repoId, removeOldTags) {
+    if (this.remotes[repoName] && removeOldTags) {
+	var tagsToDelete = [];
+	var tagPrefix = this.remotes[repoName].repoId + "/";
+	for (var tag in this.tags) {
+	    if (tag.substring(0, tagPrefix.length) === tagPrefix) {
+		tagsToDelete.push(tag);
+	    }
+	}
+	for (var i = 0; i < tagsToDelete.length; i++) {
+	    delete this.tags[tagsToDelete[i]];
+	}
+    }
+    this.remotes[repoName] = {repoId: repoId};
+};
+
 Mc.Repository.prototype.importRevisions = function (exportedData) {
     var stats = {
 	newBlobs: 0,
