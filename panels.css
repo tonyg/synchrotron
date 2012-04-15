@@ -1,6 +1,8 @@
 .panels.container { border: solid black 1px; }
 .panels.clear { clear: both; }
-.panels.left { float: left; width: 25%; }
+.panels.top { background: lightgreen; padding: 0; margin: 0; }
+.panels h1 { padding: 0; margin: 0; }
+.panels.left { float: left; width: 25%; overflow: hidden; }
 .panels.right { float: right; width: 25% }
 .panels.body { float: left; width: 49%; }
 .panels.bottom { clear: both; }
