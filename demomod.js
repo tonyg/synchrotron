@@ -116,6 +116,7 @@ function main() {
     var r = ObjectMemory.repo;
     var c = ObjectMemory.checkout;
 
+    /*
     var f;
     if (c.fileExists("foo")) {
 	f = c.readFile("foo").instance;
@@ -128,11 +129,13 @@ function main() {
 
     Boot.module_namespace.definitionDirectory.registerJsonModuleDefinition(f);
     Boot.module_namespace.instantiateModule('foo');
+    */
 
     //ObjectMemory.saveImageAs(filename);
 
     //$("body").append($((new Showdown.converter()).makeHtml("Done!")));
 
+    /*
     setTimeout(function () {
 	c.writeFile("bar", {bodyText: "hello"}, "textFile");
 	setTimeout(function () {
@@ -145,6 +148,7 @@ function main() {
 	    }, 500);
 	}, 1000);
     }, 1000);
+    */
 
     c.changeListeners.dirty.push(function (event) {
 	viewModel.checkoutDirty(event.dirty);
