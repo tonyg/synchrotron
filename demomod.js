@@ -33,7 +33,7 @@ var viewModel = {
 };
 
 viewModel.commitRepository = function () {
-    ObjectMemory.checkout.commit();
+    ObjectMemory.checkout.commit({date: +(new Date())});
     ObjectMemory.saveImage();
 };
 
@@ -182,7 +182,8 @@ function main() {
 	    var revId = rawEntry.revId;
 	    var commit = ObjectMemory.repo.lookup(revId);
 	    var metadata = commit.metadata || {};
-	    var summary = metadata.summary || "(no summary)";
+	    var summary = metadata.summary || "";
+	    var date = metadata.date ? new Date(metadata.date).toISOString() : "";
 	    var branchNames = wrappedRepo.lookupRev(revId).branches;
 	    var cookedEntry = {
 		revId: revId,
@@ -207,6 +208,7 @@ function main() {
 		      })(revId)}
 		    : null,
 		summary: summary,
+		date: date,
 		branches: [],
 		pictures: []
 	    };

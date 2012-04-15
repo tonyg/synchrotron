@@ -1,4 +1,4 @@
-<span data-bind="click: (function () { setSelectedRevision(revId) })">{{#pictures}}<img src="{{url}}">{{/pictures}} <span data-bind="style: {background: selectedRevision() == revId ? 'darkgreen' : ((mergeA() == revId) || (mergeB() == revId)) ? 'darkred' : 'white', color: selectedRevision() == revId ? 'white' : 'black'}">{{summary}}</span>
+<span data-bind="click: (function () { setSelectedRevision(revId) })">{{#pictures}}<img src="{{url}}">{{/pictures}} <span data-bind="style: {background: selectedRevision() == revId ? 'darkgreen' : ((mergeA() == revId) || (mergeB() == revId)) ? 'darkred' : 'white', color: selectedRevision() == revId ? 'white' : 'black'}">{{date}} {{summary}}</span>
 <span class="repo-branches">
 {{#branches}}
 {{branch}}

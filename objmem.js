@@ -38,7 +38,8 @@ if (__$_new_instances.length) {
 	delete instance.objectType;
 	checkout.writeFile(instance.name, instance, objectType);
     }
-    checkout.commit({summary: "Bootstrapping new instances"});
+    checkout.commit({date: +(new Date()),
+		     summary: "Bootstrapping new instances"});
 }
 
 function getDirName() {
