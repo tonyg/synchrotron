@@ -1,0 +1,13 @@
+# SynchroTron
+
+## What is this?
+
+An experimental image-style single-file HTML application inspired by
+[TiddlyWiki](http://tiddlywiki.com/), but structured around a
+Smalltalk-style code-as-data model and a git-like JSON version-control
+system.
+
+## Bugs
+
+ - Merging two branches each having a CSS change doesn't apply the
+   subsidiary branch's changes in the active instance until commit.

@@ -257,6 +257,8 @@ function main() {
     Panels.panelsDiv.append(Panels.boundSkin("fileEditor", viewModel));
     Panels.footerDiv.append(Panels.boundSkin("footer", viewModel));
 
+    viewModel.setSelectedFilename("FrontPage");
+
     repl = new Repl.Repl("__repl__div__");
     repl.addBinding("ns", Boot.module_namespace);
 };

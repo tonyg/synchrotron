@@ -9,6 +9,7 @@ INDEX_STYLES=\
 	synchrotron.css panels.css \
 	codemirror.css codemirror-theme-default.css
 INDEX_SKINS=$(wildcard skins/*)
+INDEX_TEXTFILES=FrontPage.txt
 
 INDEX_BOOTMOD=net.lshift.synchrotron.demo
 
@@ -25,4 +26,5 @@ index.html: bootimage.py $(INDEX_MODSOURCES) $(INDEX_MODSPECS) $(INDEX_STYLES) $
 		--skins $(INDEX_SKINS) \
 		--styles $(INDEX_STYLES) \
 		--modules $(INDEX_MODFILES) \
+		--textfiles $(INDEX_TEXTFILES) \
 	> $@

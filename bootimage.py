@@ -13,19 +13,22 @@ f.close()
 mods = {}
 defs = []
 
-def loadSkin(name):
-    sys.stderr.write("Loading skin file %s...\n" % (name,))
+def loadTextFile(name, kind = 'text', prefix = ''):
+    sys.stderr.write("Loading %s file %s...\n" % (kind, name))
     f = file(name)
     body = f.read()
     f.close()
     metadata = {}
     metadata["bodyText"] = body
-    metadata["name"] = "skin:" + os.path.splitext(os.path.basename(name))[0]
+    metadata["name"] = prefix + os.path.splitext(os.path.basename(name))[0]
     metadata["mimeType"] = "text/plain"
 
     d = dict(metadata)
     d["objectType"] = "textFile"
     defs.append(d)
+
+def loadSkin(name):
+    return loadTextFile(name, 'skin', 'skin:')
 
 def loadStyleFile(name):
     sys.stderr.write("Loading CSS style file %s...\n" % (name,))
@@ -75,6 +78,7 @@ goal = sys.argv[1]
 modspecs = []
 stylefiles = []
 skins = []
+textfiles = []
 mode = modspecs
 for name in sys.argv[2:]:
     if name == '--styles':
@@ -83,6 +87,8 @@ for name in sys.argv[2:]:
         mode = modspecs
     elif name == '--skins':
         mode = skins
+    elif name == '--textfiles':
+        mode = textfiles
     else:
         mode.append(name)
 
@@ -94,6 +100,9 @@ for name in modspecs:
 
 for name in skins:
     loadSkin(name)
+
+for name in textfiles:
+    loadTextFile(name)
 
 replaceMarker('__$__exported_repo__$__', '(' + json.dumps({}, indent = 2) + ')')
 replaceMarker('__$__exported_reflog__$__', '(' + json.dumps([], indent = 2) + ')')
