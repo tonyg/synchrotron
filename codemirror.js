@@ -2064,7 +2064,12 @@ var CodeMirror = (function() {
       return result;
     };
   else
-    splitLines = function(string){return string.split(/\r?\n/);};
+    splitLines = function(string){
+      if (Array.isArray(string))
+	return string;
+      else
+	return string.split(/\r?\n/);
+    };
   CodeMirror.splitLines = splitLines;
 
   // Sane model of finding and setting the selection in a textarea

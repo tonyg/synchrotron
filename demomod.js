@@ -90,18 +90,19 @@ viewModel.saveEdits = function () {
 
 viewModel.importButtonClicked = function (event) {
     try {
-	netscape.security.PrivilegeManager.enablePrivilege("UniversalXPConnect");
-	var fp = Components.classes["@mozilla.org/filepicker;1"]
-	    .createInstance(Components.interfaces.nsIFilePicker);
-	fp.init(window, "Choose a file to import from", 0);
-	if (fp.show() == 0 && fp.file.exists()) {
-	    // OK clicked, and selected file exists.
-	    var repoName = prompt("What should the short name for this repository be?",
-				  fp.file.leafName);
-	    ObjectMemory.loadChangesFrom(fp.file.path, repoName);
-	}
+      var importFileSelect = document.getElementById('importFileSelection');
+      importFileSelection.onchange = function (e) {
+	var file = e.target.files[0];
+	var reader = new FileReader();
+	reader.onload = function () {
+	  var repoName = prompt("What should the short name for this repository be?", file.name);
+	  ObjectMemory.loadChangesFromString(reader.result, repoName);
+	};
+	reader.readAsText(file);
+      };
+      importFileSelection.click();
     } catch (ex) {
-	alert(ex);
+      alert(ex);
     }
     event.stopPropagation();
 };

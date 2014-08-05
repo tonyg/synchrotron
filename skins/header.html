@@ -1,5 +1,6 @@
 <button class="float-right"
 	data-bind="click: importButtonClicked">Import</button>
+<input type="file" id="importFileSelection" style="display: none;">
 <button class="float-right"
 	data-bind="visible: checkoutDirty() && !conflicts(),
 		   click: commitRepository">Commit</button>
