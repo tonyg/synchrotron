@@ -124,17 +124,7 @@ filesystem
 \end_layout
 
 \begin_layout Itemize
-a module system
-\begin_inset Marginal
-status open
-
-\begin_layout Plain Layout
-TODO: check to see when node.js sprouted its module system
-\end_layout
-
-\end_inset
-
- with imports, exports and renaming, containing 
+a module system with imports, exports and renaming, containing 
 \emph on
 all
 \emph default
