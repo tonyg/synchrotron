@@ -287,6 +287,12 @@ Many caveats apply.
  and gaining a measure of parallelism to match NC's natural concurrency.
 \end_layout
 
+\begin_layout Standard
+It would be very interesting to exploit the multi-language/language-neutral-comm
+unication aspect of NC along with OMeta to build a multi-language environment
+ within Synchrotron.
+\end_layout
+
 \begin_layout Section*
 Synchrotron and Constraints
 \end_layout
