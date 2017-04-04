@@ -84,6 +84,10 @@ C
 >>>>>>> b
 Y
 E
+
+2017-04-04 12:07:27 Actually that seems no longer to be true -- the
+output looks logically identical to the diff3 output just above.
+
 */
 
 DumpDiff3("0 1 2 A X DD C Y E",
@@ -109,6 +113,23 @@ AA
 C
 Y
 E
+*/
+
+DumpDiff3("a b c", "A b c", "a B c");
+/*
+
+<<<<<<< a
+A
+b
+||||||| o
+a
+b
+=======
+a
+B
+>>>>>>> b
+c
+
 */
 
 } catch (e) {
